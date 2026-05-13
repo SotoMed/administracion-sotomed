@@ -151,8 +151,8 @@ const seed = {
   month: new Date().toISOString().slice(0,7),
   ivaRate:16,
   isrRate:10,
-  supabaseUrl:'',
-  supabaseKey:'',
+  supabaseUrl:'https://miztzgfcglvqvvjjtcyv.supabase.co',
+  supabaseKey:'sb_publishable_Nei-DTUW7PhVnrKHYHCM8g_9aWq7rvb',
   issued:[],
   received:[],
   services:[]
@@ -167,6 +167,8 @@ function loadState(){
     if(!raw) return {...seed};
     const parsed = JSON.parse(raw);
     return {...seed, ...parsed,
+      supabaseUrl: parsed.supabaseUrl || seed.supabaseUrl,
+      supabaseKey: parsed.supabaseKey || seed.supabaseKey,
       issued:Array.isArray(parsed.issued)?parsed.issued:[],
       received:Array.isArray(parsed.received)?parsed.received:[],
       services:Array.isArray(parsed.services)?parsed.services:[]
