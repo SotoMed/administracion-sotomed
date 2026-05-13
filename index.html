@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SotoMed Control | Administración simple + XML CFDI</title>
+<title>SotoMed Control | Administración simple + XML CFDI + autoactualización</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -160,6 +160,9 @@ const seed = {
 
 let state = loadState();
 let supabaseClient = null;
+let autoSyncHandle = null;
+let lastAutoSyncAt = '';
+const AUTO_SYNC_MS = 5000;
 
 function loadState(){
   try{
@@ -182,7 +185,12 @@ function saveState(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function normalizeSupabaseUrl(url){
+  return String(url || '').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/+$/,'');
+}
+
 function connectSupabase(){
+  state.supabaseUrl = normalizeSupabaseUrl(state.supabaseUrl);
   if(state.supabaseUrl && state.supabaseKey && window.supabase){
     supabaseClient = supabase.createClient(state.supabaseUrl, state.supabaseKey);
   }else{
@@ -195,7 +203,7 @@ function updateConnectionStatus(){
   const el = document.getElementById('connectionStatus');
   if(!el) return;
   if(supabaseClient){
-    el.innerHTML = '<span class="status-dot ok"></span> Supabase activo';
+    el.innerHTML = '<span class="status-dot ok"></span> Supabase activo · auto';
   }else{
     el.innerHTML = '<span class="status-dot"></span> Modo local';
   }
@@ -250,8 +258,8 @@ function getMonthly(){
   };
 }
 
-async function loadRemote(){
-  if(!supabaseClient) return;
+async function loadRemote(showAlert = true){
+  if(!supabaseClient) return false;
   try{
     const [i,r,s] = await Promise.all([
       supabaseClient.from(TABLES.issued).select('*').order('invoice_date', {ascending:false}),
@@ -260,9 +268,9 @@ async function loadRemote(){
     ]);
 
     if(i.error || r.error || s.error){
-      alert('No pude cargar Supabase. Revisa que ya ejecutaste el SQL y que la URL/Key sean correctas.');
+      if(showAlert) alert('No pude cargar Supabase. Revisa que ya ejecutaste el SQL y que la URL/Key sean correctas.');
       console.error(i.error || r.error || s.error);
-      return;
+      return false;
     }
 
     state.issued = (i.data || []).map(row => ({
@@ -284,11 +292,40 @@ async function loadRemote(){
     }));
 
     saveState();
+    return true;
   }catch(err){
     console.error(err);
-    alert('Error general al cargar Supabase.');
+    if(showAlert) alert('Error general al cargar Supabase.');
+    return false;
   }
 }
+
+
+function userIsEditing(){
+  const el = document.activeElement;
+  if(!el) return false;
+  const tag = String(el.tagName || '').toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select';
+}
+
+async function autoRefresh(){
+  if(!supabaseClient || document.hidden || userIsEditing()) return;
+  const ok = await loadRemote(false);
+  if(ok){
+    lastAutoSyncAt = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    render();
+  }
+}
+
+function startAutoSync(){
+  if(autoSyncHandle) clearInterval(autoSyncHandle);
+  autoSyncHandle = setInterval(autoRefresh, AUTO_SYNC_MS);
+}
+
+window.addEventListener('focus', () => autoRefresh());
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden) autoRefresh();
+});
 
 async function insertRemote(type,item){
   if(!supabaseClient) return null;
@@ -498,7 +535,10 @@ function monthBox(){
   return `<div class="month-box">
     <label>Mes</label>
     <input type="month" id="monthInput" value="${esc(state.month)}">
-    <button class="small-btn" id="reloadBtn" type="button">Actualizar</button>
+    <button class="small-btn" id="reloadBtn" type="button">Actualizar ahora</button>
+    <div style="margin-top:8px;color:#64748b;font-size:12px;line-height:1.35">
+      ${lastAutoSyncAt ? 'Última autoactualización: ' + esc(lastAutoSyncAt) : 'Autoactualiza cada 5 segundos si no estás escribiendo.'}
+    </div>
   </div>`;
 }
 
@@ -734,7 +774,7 @@ function viewSettings(){
         <h3>Conexión Supabase</h3>
         <p class="sub">Para que el sistema guarde en la nube y funcione desde GitHub Pages.</p>
         <form class="form" id="supabaseSettingsForm">
-          <div class="field"><label>Supabase URL</label><input name="supabaseUrl" value="${esc(state.supabaseUrl)}" placeholder="https://xxxxx.supabase.co"></div>
+          <div class="field"><label>Supabase URL</label><input name="supabaseUrl" value="${esc(normalizeSupabaseUrl(state.supabaseUrl))}" placeholder="https://xxxxx.supabase.co"></div>
           <div class="field"><label>Publishable / Anon Key</label><textarea name="supabaseKey" placeholder="sb_publishable... o anon key">${esc(state.supabaseKey)}</textarea></div>
           <button class="save-btn" type="submit">Guardar conexión</button>
         </form>
@@ -885,18 +925,26 @@ function attachEvents(){
   document.getElementById('supabaseSettingsForm')?.addEventListener('submit', async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    state.supabaseUrl = String(fd.get('supabaseUrl') || '').trim();
+    state.supabaseUrl = normalizeSupabaseUrl(fd.get('supabaseUrl'));
     state.supabaseKey = String(fd.get('supabaseKey') || '').trim();
     saveState();
     connectSupabase();
-    await loadRemote();
+    startAutoSync();
+    const ok = await loadRemote();
     render();
+    if(ok){
+      alert('Conexión guardada correctamente. Supabase ya está activo.');
+    }
   });
 
   document.getElementById('testSupabaseBtn')?.addEventListener('click', async () => {
     connectSupabase();
-    await loadRemote();
+    startAutoSync();
+    const ok = await loadRemote();
     render();
+    if(ok){
+      alert('Prueba correcta: datos cargados desde Supabase.');
+    }
   });
 
   document.getElementById('clearLocalBtn')?.addEventListener('click', () => {
@@ -904,6 +952,7 @@ function attachEvents(){
       localStorage.removeItem(STORAGE_KEY);
       state = {...seed};
       connectSupabase();
+      startAutoSync();
       render();
     }
   });
@@ -1091,7 +1140,8 @@ create index if not exists idx_sotomed_received_invoice_date on public.sotomed_r
 create index if not exists idx_sotomed_service_date on public.sotomed_service_sheets(service_date);`;
 
 connectSupabase();
-loadRemote().then(render);
+startAutoSync();
+loadRemote(false).then(render);
 </script>
 </body>
 </html>
