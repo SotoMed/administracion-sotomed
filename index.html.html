@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SotoMed Control | Administración simple + XML CFDI</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f4f7fb;
+  --card:#ffffff;
+  --line:#dbe3ec;
+  --text:#172033;
+  --muted:#64748b;
+  --navy:#0b3a70;
+  --teal:#0ea5a4;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#e11d48;
+  --blue:#2563eb;
+  --shadow:0 10px 24px rgba(15,23,42,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:20px}
+.top{
+  background:linear-gradient(135deg,var(--navy),#155ca8);
+  color:#fff;
+  padding:24px;
+  border-radius:24px;
+  box-shadow:var(--shadow);
+}
+.top h1{font-size:30px;letter-spacing:-.03em}
+.top p{margin-top:8px;color:#dbeafe;line-height:1.5}
+.top-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.status-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:9px 12px;border-radius:999px;font-weight:700}
+.status-dot{width:10px;height:10px;border-radius:999px;background:#fbbf24}
+.status-dot.ok{background:#34d399}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.tab-btn,.save-btn,.ghost-btn,.danger-btn,.small-btn{
+  border:none;border-radius:14px;padding:10px 14px;font-weight:800;
+}
+.tab-btn,.ghost-btn,.small-btn{background:#fff;color:#0f172a;border:1px solid var(--line)}
+.tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.save-btn{background:linear-gradient(135deg,var(--teal),#0b8f8e);color:#fff}
+.danger-btn{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
+.small-btn{padding:7px 10px;border-radius:10px;font-size:13px}
+.panel{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px}
+.section-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.section-title h2{font-size:26px;letter-spacing:-.03em}
+.section-title p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.5}
+.month-box{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:10px}
+.month-box label{font-size:13px;font-weight:800;color:#475569}
+input,select,textarea{
+  width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;
+}
+textarea{min-height:86px;resize:vertical}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden}
+.metric::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#cbd5e1}
+.metric.good::before{background:var(--green)}
+.metric.warn::before{background:var(--amber)}
+.metric.bad::before{background:var(--red)}
+.metric.blue::before{background:var(--blue)}
+.metric .l{font-size:13px;color:var(--muted)}
+.metric .v{margin-top:8px;font-size:27px;font-weight:900;letter-spacing:-.03em}
+.metric .s{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.45}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:18px}
+.card h3{font-size:20px;letter-spacing:-.02em}
+.card p.sub{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.5}
+.form{display:grid;gap:10px;margin-top:14px}
+.field{display:grid;gap:5px}
+.field label{font-size:12px;font-weight:800;color:#475569}
+.check{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;font-size:14px;font-weight:700;color:#475569}
+.check input{width:auto}
+.actions-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.note-box{margin-top:16px;padding:14px;border-radius:16px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.6}
+.note-box b{color:#334155}
+.xml-box{margin-top:14px;padding:14px;border-radius:16px;background:#eef6ff;border:1px dashed #93c5fd;color:#1e3a8a;font-size:13px;line-height:1.55}
+.xml-box input{margin-top:8px;background:#fff}
+.table-title{margin-top:18px;font-size:18px;font-weight:900}
+.table-wrap{margin-top:10px;border:1px solid var(--line);border-radius:18px;overflow:auto;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+thead{background:#f8fafc}
+th,td{padding:12px;text-align:left;border-top:1px solid #eef2f7;vertical-align:top}
+th{border-top:none;font-size:12px;color:#475569;text-transform:uppercase;white-space:nowrap}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2f7;font-size:12px;font-weight:800}
+.badge.good{background:#ecfdf5;color:#166534}
+.badge.warn{background:#fffbeb;color:#92400e}
+.badge.bad{background:#fff1f2;color:#9f1239}
+.empty{padding:24px;text-align:center;color:#64748b}
+.danger-text{color:#be123c}
+.good-text{color:#047857}
+.code{
+  display:block;width:100%;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:16px;padding:14px;line-height:1.45;font-size:12px;max-height:320px;overflow:auto;
+}
+@media (max-width:1000px){
+  .metrics,.grid-2,.grid-3{grid-template-columns:1fr}
+  .metric .v{font-size:24px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="top-row">
+      <div>
+        <h1>SotoMed Control</h1>
+        <p>Administración simple: facturas emitidas, facturas recibidas, IVA, ISR estimado, cobranza, cuentas por pagar y hojas de servicio.</p>
+      </div>
+      <div class="status-pill" id="connectionStatus"><span class="status-dot"></span> Modo local</div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="panel" id="main"></div>
+</div>
+
+<script>
+/*
+  SotoMed Control V1.1
+  - Funciona en modo local con localStorage.
+  - Lee XML CFDI para llenar facturas emitidas y recibidas.
+  - Para usar Supabase: pega URL y Publishable/Anon Key en Configuración y ejecuta el SQL incluido en el archivo sotomed_supabase.sql.
+  - Esta V1 es control interno; valida impuestos finales con tu contador.
+*/
+
+const TABLES = {
+  issued:'sotomed_issued_invoices',
+  received:'sotomed_received_invoices',
+  services:'sotomed_service_sheets'
+};
+
+const STORAGE_KEY = 'sotomed_control_v1';
+
+const tabs = [
+  ['dashboard','Dashboard'],
+  ['issued','Emitidas'],
+  ['received','Recibidas'],
+  ['services','Servicios'],
+  ['settings','Configuración']
+];
+
+const seed = {
+  activeTab:'dashboard',
+  month: new Date().toISOString().slice(0,7),
+  ivaRate:16,
+  isrRate:10,
+  supabaseUrl:'',
+  supabaseKey:'',
+  issued:[],
+  received:[],
+  services:[]
+};
+
+let state = loadState();
+let supabaseClient = null;
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return {...seed};
+    const parsed = JSON.parse(raw);
+    return {...seed, ...parsed,
+      issued:Array.isArray(parsed.issued)?parsed.issued:[],
+      received:Array.isArray(parsed.received)?parsed.received:[],
+      services:Array.isArray(parsed.services)?parsed.services:[]
+    };
+  }catch(err){
+    return {...seed};
+  }
+}
+
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function connectSupabase(){
+  if(state.supabaseUrl && state.supabaseKey && window.supabase){
+    supabaseClient = supabase.createClient(state.supabaseUrl, state.supabaseKey);
+  }else{
+    supabaseClient = null;
+  }
+  updateConnectionStatus();
+}
+
+function updateConnectionStatus(){
+  const el = document.getElementById('connectionStatus');
+  if(!el) return;
+  if(supabaseClient){
+    el.innerHTML = '<span class="status-dot ok"></span> Supabase activo';
+  }else{
+    el.innerHTML = '<span class="status-dot"></span> Modo local';
+  }
+}
+
+function hoy(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return 'local_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
+function money(n){ return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function num(v){ return Number(String(v ?? '').replaceAll(',','')) || 0; }
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+function monthFilter(row){ return String(row.date || '').slice(0,7) === state.month; }
+function sum(list,key){ return list.reduce((a,b)=>a+num(b[key]),0); }
+function calcIva(subtotal){ return +(num(subtotal) * (num(state.ivaRate)/100)).toFixed(2); }
+function calcTotal(subtotal, iva){ return +(num(subtotal) + num(iva)).toFixed(2); }
+
+function metric(label,value,sub,status='blue'){
+  return `<div class="metric ${status}"><div class="l">${esc(label)}</div><div class="v">${esc(value)}</div><div class="s">${esc(sub)}</div></div>`;
+}
+
+function getMonthly(){
+  const issued = state.issued.filter(monthFilter);
+  const received = state.received.filter(monthFilter);
+  const services = state.services.filter(monthFilter);
+
+  const issuedSubtotal = sum(issued,'subtotal');
+  const issuedIva = sum(issued,'iva');
+  const issuedTotal = sum(issued,'total');
+  const receivedSubtotal = sum(received,'subtotal');
+  const receivedIva = sum(received,'iva');
+  const receivedTotal = sum(received,'total');
+
+  const collected = sum(issued.filter(x=>x.paid),'total');
+  const receivable = sum(issued.filter(x=>!x.paid),'total');
+  const paidExpenses = sum(received.filter(x=>x.paid),'total');
+  const payable = sum(received.filter(x=>!x.paid),'total');
+
+  const ivaToPay = issuedIva - receivedIva;
+  const estimatedProfit = collected - paidExpenses;
+  const estimatedIsr = Math.max(estimatedProfit,0) * (num(state.isrRate)/100);
+  const pendingServices = services.filter(x=>!x.invoiced);
+  const servicePendingAmount = sum(pendingServices,'amount');
+
+  return {
+    issued, received, services,
+    issuedSubtotal, issuedIva, issuedTotal,
+    receivedSubtotal, receivedIva, receivedTotal,
+    collected, receivable, paidExpenses, payable,
+    ivaToPay, estimatedProfit, estimatedIsr,
+    pendingServices, servicePendingAmount
+  };
+}
+
+async function loadRemote(){
+  if(!supabaseClient) return;
+  try{
+    const [i,r,s] = await Promise.all([
+      supabaseClient.from(TABLES.issued).select('*').order('invoice_date', {ascending:false}),
+      supabaseClient.from(TABLES.received).select('*').order('invoice_date', {ascending:false}),
+      supabaseClient.from(TABLES.services).select('*').order('service_date', {ascending:false})
+    ]);
+
+    if(i.error || r.error || s.error){
+      alert('No pude cargar Supabase. Revisa que ya ejecutaste el SQL y que la URL/Key sean correctas.');
+      console.error(i.error || r.error || s.error);
+      return;
+    }
+
+    state.issued = (i.data || []).map(row => ({
+      id:row.id, date:row.invoice_date, client:row.client || '', invoiceNumber:row.invoice_number || '',
+      subtotal:num(row.subtotal), iva:num(row.iva), total:num(row.total), paid:!!row.paid,
+      paymentDate:row.payment_date || '', notes:row.notes || ''
+    }));
+
+    state.received = (r.data || []).map(row => ({
+      id:row.id, date:row.invoice_date, provider:row.provider || '', invoiceNumber:row.invoice_number || '',
+      subtotal:num(row.subtotal), iva:num(row.iva), total:num(row.total), paid:!!row.paid,
+      paymentDate:row.payment_date || '', notes:row.notes || ''
+    }));
+
+    state.services = (s.data || []).map(row => ({
+      id:row.id, date:row.service_date, client:row.client || '', serviceNumber:row.service_number || '',
+      equipment:row.equipment || '', work:row.work_done || '', amount:num(row.amount),
+      invoiced:!!row.invoiced, invoiceNumber:row.invoice_number || ''
+    }));
+
+    saveState();
+  }catch(err){
+    console.error(err);
+    alert('Error general al cargar Supabase.');
+  }
+}
+
+async function insertRemote(type,item){
+  if(!supabaseClient) return null;
+  let payload = {};
+  if(type === 'issued'){
+    payload = {
+      invoice_date:item.date, client:item.client, invoice_number:item.invoiceNumber,
+      subtotal:num(item.subtotal), iva:num(item.iva), total:num(item.total),
+      paid:!!item.paid, payment_date:item.paymentDate || null, notes:item.notes || null
+    };
+  }
+  if(type === 'received'){
+    payload = {
+      invoice_date:item.date, provider:item.provider, invoice_number:item.invoiceNumber,
+      subtotal:num(item.subtotal), iva:num(item.iva), total:num(item.total),
+      paid:!!item.paid, payment_date:item.paymentDate || null, notes:item.notes || null
+    };
+  }
+  if(type === 'services'){
+    payload = {
+      service_date:item.date, client:item.client, service_number:item.serviceNumber,
+      equipment:item.equipment, work_done:item.work, amount:num(item.amount),
+      invoiced:!!item.invoiced, invoice_number:item.invoiceNumber || null
+    };
+  }
+  const {data,error} = await supabaseClient.from(TABLES[type]).insert(payload).select().single();
+  if(error) throw error;
+  return data;
+}
+
+async function updateRemote(type,id,changes){
+  if(!supabaseClient) return;
+  let payload = {};
+  if(type === 'issued' || type === 'received'){
+    if('paid' in changes) payload.paid = !!changes.paid;
+    if('paymentDate' in changes) payload.payment_date = changes.paymentDate || null;
+  }
+  if(type === 'services'){
+    if('invoiced' in changes) payload.invoiced = !!changes.invoiced;
+    if('invoiceNumber' in changes) payload.invoice_number = changes.invoiceNumber || null;
+  }
+  const {error} = await supabaseClient.from(TABLES[type]).update(payload).eq('id', id);
+  if(error) throw error;
+}
+
+async function deleteRemote(type,id){
+  if(!supabaseClient) return;
+  const {error} = await supabaseClient.from(TABLES[type]).delete().eq('id', id);
+  if(error) throw error;
+}
+
+
+function findFirstByLocalName(root, localName){
+  return Array.from(root.getElementsByTagName('*')).find(el => el.localName === localName) || null;
+}
+
+function findChildrenByLocalName(el, localName){
+  if(!el) return [];
+  return Array.from(el.children || []).filter(child => child.localName === localName);
+}
+
+function attr(el, name){
+  if(!el) return '';
+  return el.getAttribute(name) || el.getAttribute(name.toLowerCase()) || el.getAttribute(name.toUpperCase()) || '';
+}
+
+function parseCfdiXml(xmlText){
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  const parserError = doc.getElementsByTagName('parsererror')[0];
+  if(parserError){
+    throw new Error('El archivo no parece ser un XML válido.');
+  }
+
+  const comprobante = doc.documentElement && doc.documentElement.localName === 'Comprobante'
+    ? doc.documentElement
+    : findFirstByLocalName(doc, 'Comprobante');
+
+  if(!comprobante){
+    throw new Error('No encontré el nodo Comprobante del CFDI.');
+  }
+
+  const emisor = findFirstByLocalName(doc, 'Emisor');
+  const receptor = findFirstByLocalName(doc, 'Receptor');
+  const timbre = findFirstByLocalName(doc, 'TimbreFiscalDigital');
+
+  const serie = attr(comprobante, 'Serie');
+  const folio = attr(comprobante, 'Folio');
+  const uuidFiscal = attr(timbre, 'UUID');
+  const invoiceNumber = [serie, folio].filter(Boolean).join('-') || folio || serie || uuidFiscal || '';
+
+  const subtotal = num(attr(comprobante, 'SubTotal'));
+  const total = num(attr(comprobante, 'Total'));
+
+  let iva = 0;
+  const comprobanteImpuestos = findChildrenByLocalName(comprobante, 'Impuestos')[0];
+  const totalTrasladados = num(attr(comprobanteImpuestos, 'TotalImpuestosTrasladados'));
+  if(totalTrasladados){
+    iva = totalTrasladados;
+  }else{
+    const traslados = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'Traslado');
+    iva = traslados
+      .filter(el => attr(el, 'Impuesto') === '002')
+      .reduce((acc, el) => acc + num(attr(el, 'Importe')), 0);
+  }
+  if(!iva && total && subtotal && total >= subtotal){
+    iva = +(total - subtotal).toFixed(2);
+  }
+
+  return {
+    date: String(attr(comprobante, 'Fecha') || '').slice(0,10) || hoy(),
+    invoiceNumber,
+    subtotal,
+    iva:+iva.toFixed(2),
+    total,
+    uuid: uuidFiscal,
+    emisorName: attr(emisor, 'Nombre') || attr(emisor, 'Rfc') || '',
+    emisorRfc: attr(emisor, 'Rfc') || '',
+    receptorName: attr(receptor, 'Nombre') || attr(receptor, 'Rfc') || '',
+    receptorRfc: attr(receptor, 'Rfc') || ''
+  };
+}
+
+function xmlNotes(data, fileName){
+  const pieces = [];
+  if(data.uuid) pieces.push('UUID: ' + data.uuid);
+  if(data.emisorRfc) pieces.push('Emisor RFC: ' + data.emisorRfc);
+  if(data.receptorRfc) pieces.push('Receptor RFC: ' + data.receptorRfc);
+  if(fileName) pieces.push('Archivo XML: ' + fileName);
+  return pieces.join(' | ');
+}
+
+function fillInvoiceFromXml(type, data, fileName){
+  const form = document.getElementById(type + 'Form');
+  if(!form) return;
+
+  form.elements.date.value = data.date || hoy();
+  form.elements.invoiceNumber.value = data.invoiceNumber || '';
+  form.elements.subtotal.value = data.subtotal || 0;
+  form.elements.iva.value = data.iva || 0;
+  form.elements.total.value = data.total || calcTotal(data.subtotal, data.iva);
+
+  if(type === 'issued'){
+    form.elements.client.value = data.receptorName || '';
+  }else{
+    form.elements.provider.value = data.emisorName || '';
+  }
+
+  const notesInput = document.getElementById(type + 'XmlNotes');
+  if(notesInput) notesInput.value = xmlNotes(data, fileName);
+
+  const preview = document.getElementById(type + 'XmlPreview');
+  if(preview){
+    const nombre = type === 'issued' ? data.receptorName : data.emisorName;
+    preview.innerHTML = `
+      <b>XML leído correctamente.</b><br>
+      Nombre: ${esc(nombre || 'Sin nombre')}<br>
+      Factura: ${esc(data.invoiceNumber || 'Sin folio')}<br>
+      Subtotal: ${money(data.subtotal)} · IVA: ${money(data.iva)} · Total: ${money(data.total)}<br>
+      ${data.uuid ? 'UUID: ' + esc(data.uuid) : 'UUID no encontrado'}<br><br>
+      Revisa los datos y presiona <b>Guardar</b>.
+    `;
+  }
+}
+
+function attachXmlImport(type){
+  const input = document.getElementById(type + 'XmlFile');
+  if(!input) return;
+  input.addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    try{
+      const xmlText = await file.text();
+      const data = parseCfdiXml(xmlText);
+      fillInvoiceFromXml(type, data, file.name);
+    }catch(err){
+      console.error(err);
+      alert(err.message || 'No pude leer el XML.');
+    }
+  });
+}
+
+function render(){
+  renderTabs();
+  updateConnectionStatus();
+  const main = document.getElementById('main');
+  if(state.activeTab === 'dashboard') main.innerHTML = viewDashboard();
+  if(state.activeTab === 'issued') main.innerHTML = viewIssued();
+  if(state.activeTab === 'received') main.innerHTML = viewReceived();
+  if(state.activeTab === 'services') main.innerHTML = viewServices();
+  if(state.activeTab === 'settings') main.innerHTML = viewSettings();
+  attachEvents();
+}
+
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = tabs.map(([id,label]) => `<button class="tab-btn ${state.activeTab===id?'active':''}" data-tab="${id}">${label}</button>`).join('');
+  el.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.onclick = () => {
+      state.activeTab = btn.dataset.tab;
+      saveState();
+      render();
+    };
+  });
+}
+
+function monthBox(){
+  return `<div class="month-box">
+    <label>Mes</label>
+    <input type="month" id="monthInput" value="${esc(state.month)}">
+    <button class="small-btn" id="reloadBtn" type="button">Actualizar</button>
+  </div>`;
+}
+
+function viewDashboard(){
+  const m = getMonthly();
+  return `
+    <div class="section-title">
+      <div>
+        <h2>Dashboard</h2>
+        <p>Resumen administrativo del mes. Es una estimación interna; el cálculo fiscal final se valida con contador/SAT.</p>
+      </div>
+      ${monthBox()}
+    </div>
+
+    <div class="metrics">
+      ${metric('Facturas emitidas', money(m.issuedTotal), `${m.issued.length} facturas registradas`, 'good')}
+      ${metric('Facturas recibidas', money(m.receivedTotal), `${m.received.length} facturas registradas`, 'blue')}
+      ${metric('Por cobrar', money(m.receivable), 'Facturas emitidas pendientes de pago', m.receivable>0?'warn':'good')}
+      ${metric('Por pagar', money(m.payable), 'Facturas recibidas pendientes de pago', m.payable>0?'warn':'good')}
+
+      ${metric('IVA cobrado', money(m.issuedIva), 'IVA en facturas emitidas', 'good')}
+      ${metric('IVA pagado', money(m.receivedIva), 'IVA en facturas recibidas', 'blue')}
+      ${metric('IVA estimado', money(m.ivaToPay), 'IVA emitido - IVA recibido', m.ivaToPay>0?'warn':'good')}
+      ${metric('ISR estimado', money(m.estimatedIsr), `${state.isrRate}% sobre utilidad de flujo`, m.estimatedIsr>0?'warn':'good')}
+
+      ${metric('Cobrado', money(m.collected), 'Facturas emitidas pagadas', 'good')}
+      ${metric('Gastos pagados', money(m.paidExpenses), 'Facturas recibidas pagadas', 'blue')}
+      ${metric('Utilidad estimada', money(m.estimatedProfit), 'Cobrado - gastos pagados', m.estimatedProfit>=0?'good':'bad')}
+      ${metric('Servicios por facturar', money(m.servicePendingAmount), `${m.pendingServices.length} hojas pendientes`, m.pendingServices.length?'warn':'good')}
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Lectura rápida</h3>
+        <p class="sub">Lo que más importa para no perder control.</p>
+        <div class="note-box">
+          <b>Dinero pendiente de entrar:</b> ${money(m.receivable)}<br>
+          <b>Dinero pendiente de salir:</b> ${money(m.payable)}<br>
+          <b>IVA estimado a pagar:</b> ${money(m.ivaToPay)}<br>
+          <b>ISR estimado:</b> ${money(m.estimatedIsr)}<br><br>
+          <b>Después de IVA e ISR estimados:</b> ${money(m.estimatedProfit - Math.max(m.ivaToPay,0) - m.estimatedIsr)}
+        </div>
+      </div>
+      <div class="card">
+        <h3>Pendientes</h3>
+        <p class="sub">Facturas y servicios que requieren atención.</p>
+        <div class="note-box">
+          <b>Facturas emitidas sin pago:</b> ${m.issued.filter(x=>!x.paid).length}<br>
+          <b>Facturas recibidas sin pagar:</b> ${m.received.filter(x=>!x.paid).length}<br>
+          <b>Servicios sin facturar:</b> ${m.pendingServices.length}<br><br>
+          ${m.pendingServices.length ? 'Revisa la pestaña <b>Servicios</b> para facturar lo pendiente.' : 'No hay servicios pendientes de facturar en este mes.'}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-title">Últimas facturas emitidas del mes</div>
+    ${invoiceTable('issued', m.issued.slice(0,5), true)}
+
+    <div class="table-title">Últimas facturas recibidas del mes</div>
+    ${invoiceTable('received', m.received.slice(0,5), true)}
+  `;
+}
+
+function viewIssued(){
+  const rows = state.issued.filter(monthFilter);
+  return `
+    <div class="section-title">
+      <div>
+        <h2>Facturas emitidas</h2>
+        <p>Lo que SotoMed factura a clientes.</p>
+      </div>
+      ${monthBox()}
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Nueva factura emitida</h3>
+        <p class="sub">Puedes capturar a mano o adjuntar el XML CFDI para llenar los datos automáticamente.</p>
+        <div class="xml-box">
+          <b>Importar XML CFDI</b><br>
+          Adjunta el XML y se llenan cliente, número de factura, fecha, subtotal, IVA y total.
+          <input type="file" id="issuedXmlFile" accept=".xml,text/xml,application/xml">
+          <div id="issuedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div>
+        </div>
+        <form class="form" id="issuedForm">
+          <input type="hidden" name="xmlNotes" id="issuedXmlNotes">
+          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
+          <div class="field"><label>Cliente</label><input name="client" placeholder="Ej. Laboratorio / clínica / distribuidor"></div>
+          <div class="field"><label>Número de factura</label><input name="invoiceNumber" placeholder="Ej. A-001"></div>
+          <div class="field"><label>Subtotal</label><input type="number" step="0.01" name="subtotal" id="issuedSubtotal"></div>
+          <div class="field"><label>IVA</label><input type="number" step="0.01" name="iva" id="issuedIva"></div>
+          <div class="field"><label>Total</label><input type="number" step="0.01" name="total" id="issuedTotal"></div>
+          <label class="check"><input type="checkbox" name="paid"> Pagada</label>
+          <div class="field"><label>Fecha de pago</label><input type="date" name="paymentDate"></div>
+          <button class="save-btn" type="submit">Guardar factura emitida</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Resumen de emitidas</h3>
+        <p class="sub">Corte del mes seleccionado.</p>
+        <div class="metrics" style="grid-template-columns:1fr 1fr">
+          ${metric('Total', money(sum(rows,'total')), `${rows.length} facturas`, 'good')}
+          ${metric('IVA', money(sum(rows,'iva')), 'IVA trasladado', 'warn')}
+          ${metric('Cobrado', money(sum(rows.filter(x=>x.paid),'total')), 'Pagadas', 'good')}
+          ${metric('Pendiente', money(sum(rows.filter(x=>!x.paid),'total')), 'Por cobrar', rows.some(x=>!x.paid)?'warn':'good')}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-title">Listado de facturas emitidas</div>
+    ${invoiceTable('issued', rows)}
+  `;
+}
+
+function viewReceived(){
+  const rows = state.received.filter(monthFilter);
+  return `
+    <div class="section-title">
+      <div>
+        <h2>Facturas recibidas</h2>
+        <p>Lo que SotoMed recibe de proveedores o gastos.</p>
+      </div>
+      ${monthBox()}
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Nueva factura recibida</h3>
+        <p class="sub">Puedes capturar a mano o adjuntar el XML CFDI para llenar los datos automáticamente.</p>
+        <div class="xml-box">
+          <b>Importar XML CFDI</b><br>
+          Adjunta el XML y se llenan proveedor, número de factura, fecha, subtotal, IVA y total.
+          <input type="file" id="receivedXmlFile" accept=".xml,text/xml,application/xml">
+          <div id="receivedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div>
+        </div>
+        <form class="form" id="receivedForm">
+          <input type="hidden" name="xmlNotes" id="receivedXmlNotes">
+          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
+          <div class="field"><label>Proveedor</label><input name="provider" placeholder="Ej. Proveedor / refacciones / gasolina"></div>
+          <div class="field"><label>Número de factura</label><input name="invoiceNumber" placeholder="Ej. F-1001"></div>
+          <div class="field"><label>Subtotal</label><input type="number" step="0.01" name="subtotal" id="receivedSubtotal"></div>
+          <div class="field"><label>IVA</label><input type="number" step="0.01" name="iva" id="receivedIva"></div>
+          <div class="field"><label>Total</label><input type="number" step="0.01" name="total" id="receivedTotal"></div>
+          <label class="check"><input type="checkbox" name="paid"> Pagada</label>
+          <div class="field"><label>Fecha de pago</label><input type="date" name="paymentDate"></div>
+          <button class="save-btn" type="submit">Guardar factura recibida</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Resumen de recibidas</h3>
+        <p class="sub">Corte del mes seleccionado.</p>
+        <div class="metrics" style="grid-template-columns:1fr 1fr">
+          ${metric('Total', money(sum(rows,'total')), `${rows.length} facturas`, 'blue')}
+          ${metric('IVA', money(sum(rows,'iva')), 'IVA acreditable', 'good')}
+          ${metric('Pagado', money(sum(rows.filter(x=>x.paid),'total')), 'Pagadas', 'blue')}
+          ${metric('Pendiente', money(sum(rows.filter(x=>!x.paid),'total')), 'Por pagar', rows.some(x=>!x.paid)?'warn':'good')}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-title">Listado de facturas recibidas</div>
+    ${invoiceTable('received', rows)}
+  `;
+}
+
+function viewServices(){
+  const rows = state.services.filter(monthFilter);
+  const pending = rows.filter(x=>!x.invoiced);
+  return `
+    <div class="section-title">
+      <div>
+        <h2>Hojas de servicio</h2>
+        <p>Registro simple para saber qué servicios ya se facturaron y cuáles siguen pendientes.</p>
+      </div>
+      ${monthBox()}
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Nueva hoja de servicio</h3>
+        <form class="form" id="serviceForm">
+          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
+          <div class="field"><label>Cliente</label><input name="client"></div>
+          <div class="field"><label>Folio de servicio</label><input name="serviceNumber" placeholder="Ej. HS-001"></div>
+          <div class="field"><label>Equipo</label><input name="equipment" placeholder="Ej. BC-5380 / refrigerador / centrifuga"></div>
+          <div class="field"><label>Trabajo realizado</label><textarea name="work"></textarea></div>
+          <div class="field"><label>Monto</label><input type="number" step="0.01" name="amount"></div>
+          <label class="check"><input type="checkbox" name="invoiced"> Ya facturado</label>
+          <div class="field"><label>Factura relacionada</label><input name="invoiceNumber" placeholder="Ej. A-001"></div>
+          <button class="save-btn" type="submit">Guardar hoja de servicio</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Resumen de servicios</h3>
+        <div class="metrics" style="grid-template-columns:1fr 1fr">
+          ${metric('Servicios', String(rows.length), 'Hojas del mes', 'blue')}
+          ${metric('Por facturar', String(pending.length), 'Pendientes', pending.length?'warn':'good')}
+          ${metric('Monto total', money(sum(rows,'amount')), 'Servicios registrados', 'good')}
+          ${metric('Monto pendiente', money(sum(pending,'amount')), 'Pendiente de factura', pending.length?'warn':'good')}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-title">Listado de hojas de servicio</div>
+    ${servicesTable(rows)}
+  `;
+}
+
+function viewSettings(){
+  return `
+    <div class="section-title">
+      <div>
+        <h2>Configuración</h2>
+        <p>Parámetros rápidos para cálculo y conexión con Supabase.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Impuestos estimados</h3>
+        <p class="sub">Se usan solo para el dashboard.</p>
+        <form class="form" id="taxSettingsForm">
+          <div class="field"><label>IVA %</label><input type="number" step="0.01" name="ivaRate" value="${esc(state.ivaRate)}"></div>
+          <div class="field"><label>ISR estimado %</label><input type="number" step="0.01" name="isrRate" value="${esc(state.isrRate)}"></div>
+          <button class="save-btn" type="submit">Guardar configuración</button>
+        </form>
+        <div class="note-box">
+          El ISR es solo estimado. Lo dejé configurable porque depende de tu régimen, deducciones, retenciones y criterio contable.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Conexión Supabase</h3>
+        <p class="sub">Para que el sistema guarde en la nube y funcione desde GitHub Pages.</p>
+        <form class="form" id="supabaseSettingsForm">
+          <div class="field"><label>Supabase URL</label><input name="supabaseUrl" value="${esc(state.supabaseUrl)}" placeholder="https://xxxxx.supabase.co"></div>
+          <div class="field"><label>Publishable / Anon Key</label><textarea name="supabaseKey" placeholder="sb_publishable... o anon key">${esc(state.supabaseKey)}</textarea></div>
+          <button class="save-btn" type="submit">Guardar conexión</button>
+        </form>
+        <div class="actions-row">
+          <button class="ghost-btn" id="testSupabaseBtn">Probar / cargar datos</button>
+          <button class="danger-btn" id="clearLocalBtn">Borrar datos locales</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>SQL de Supabase</h3>
+      <p class="sub">Ejecuta este SQL en Supabase SQL Editor antes de conectar.</p>
+      <div class="actions-row">
+        <button class="ghost-btn" id="copySqlBtn">Copiar SQL</button>
+      </div>
+      <pre class="code" id="sqlBlock">${esc(SUPABASE_SQL)}</pre>
+    </div>
+  `;
+}
+
+function invoiceTable(type,rows,compact=false){
+  const nameCol = type === 'issued' ? 'Cliente' : 'Proveedor';
+  if(!rows.length) return `<div class="table-wrap"><div class="empty">Sin registros</div></div>`;
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th><th>${nameCol}</th><th>Factura</th><th>Subtotal</th><th>IVA</th><th>Total</th><th>Estado</th>${compact?'':'<th>Acciones</th>'}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${esc(r.date)}</td>
+              <td>${esc(type==='issued'?r.client:r.provider)}</td>
+              <td>${esc(r.invoiceNumber)}</td>
+              <td>${money(r.subtotal)}</td>
+              <td>${money(r.iva)}</td>
+              <td><b>${money(r.total)}</b></td>
+              <td>${r.paid ? '<span class="badge good">Pagada</span>' : '<span class="badge warn">Pendiente</span>'}</td>
+              ${compact?'':`<td>
+                <button class="small-btn" data-toggle-paid="${type}" data-id="${esc(r.id)}">${r.paid?'Marcar pendiente':'Marcar pagada'}</button>
+                <button class="danger-btn small-btn" data-delete="${type}" data-id="${esc(r.id)}">Borrar</button>
+              </td>`}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function servicesTable(rows){
+  if(!rows.length) return `<div class="table-wrap"><div class="empty">Sin registros</div></div>`;
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Cliente</th><th>Folio</th><th>Equipo</th><th>Trabajo</th><th>Monto</th><th>Estado</th><th>Factura</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${esc(r.date)}</td>
+              <td>${esc(r.client)}</td>
+              <td>${esc(r.serviceNumber)}</td>
+              <td>${esc(r.equipment)}</td>
+              <td>${esc(r.work)}</td>
+              <td><b>${money(r.amount)}</b></td>
+              <td>${r.invoiced ? '<span class="badge good">Facturado</span>' : '<span class="badge warn">Pendiente</span>'}</td>
+              <td>${esc(r.invoiceNumber || '')}</td>
+              <td>
+                <button class="small-btn" data-toggle-service="${esc(r.id)}">${r.invoiced?'Marcar pendiente':'Marcar facturado'}</button>
+                <button class="danger-btn small-btn" data-delete="services" data-id="${esc(r.id)}">Borrar</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function attachEvents(){
+  document.getElementById('monthInput')?.addEventListener('change', e => {
+    state.month = e.target.value || state.month;
+    saveState();
+    render();
+  });
+
+  document.getElementById('reloadBtn')?.addEventListener('click', async () => {
+    await loadRemote();
+    render();
+  });
+
+  autoCalc('issued');
+  autoCalc('received');
+  attachXmlImport('issued');
+  attachXmlImport('received');
+
+  document.getElementById('issuedForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const item = {
+      id:uid(), date:fd.get('date') || hoy(), client:fd.get('client') || '', invoiceNumber:fd.get('invoiceNumber') || '',
+      subtotal:num(fd.get('subtotal')), iva:num(fd.get('iva')), total:num(fd.get('total')), paid:fd.get('paid')==='on',
+      paymentDate:fd.get('paymentDate') || '', notes:fd.get('xmlNotes') || ''
+    };
+    await addItem('issued',item);
+  });
+
+  document.getElementById('receivedForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const item = {
+      id:uid(), date:fd.get('date') || hoy(), provider:fd.get('provider') || '', invoiceNumber:fd.get('invoiceNumber') || '',
+      subtotal:num(fd.get('subtotal')), iva:num(fd.get('iva')), total:num(fd.get('total')), paid:fd.get('paid')==='on',
+      paymentDate:fd.get('paymentDate') || '', notes:fd.get('xmlNotes') || ''
+    };
+    await addItem('received',item);
+  });
+
+  document.getElementById('serviceForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const item = {
+      id:uid(), date:fd.get('date') || hoy(), client:fd.get('client') || '', serviceNumber:fd.get('serviceNumber') || '',
+      equipment:fd.get('equipment') || '', work:fd.get('work') || '', amount:num(fd.get('amount')),
+      invoiced:fd.get('invoiced')==='on', invoiceNumber:fd.get('invoiceNumber') || ''
+    };
+    await addItem('services',item);
+  });
+
+  document.getElementById('taxSettingsForm')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    state.ivaRate = num(fd.get('ivaRate'));
+    state.isrRate = num(fd.get('isrRate'));
+    saveState();
+    alert('Configuración guardada.');
+    render();
+  });
+
+  document.getElementById('supabaseSettingsForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    state.supabaseUrl = String(fd.get('supabaseUrl') || '').trim();
+    state.supabaseKey = String(fd.get('supabaseKey') || '').trim();
+    saveState();
+    connectSupabase();
+    await loadRemote();
+    render();
+  });
+
+  document.getElementById('testSupabaseBtn')?.addEventListener('click', async () => {
+    connectSupabase();
+    await loadRemote();
+    render();
+  });
+
+  document.getElementById('clearLocalBtn')?.addEventListener('click', () => {
+    if(confirm('¿Borrar datos locales de este navegador? No borra Supabase.')){
+      localStorage.removeItem(STORAGE_KEY);
+      state = {...seed};
+      connectSupabase();
+      render();
+    }
+  });
+
+  document.getElementById('copySqlBtn')?.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(SUPABASE_SQL);
+    alert('SQL copiado.');
+  });
+
+  document.querySelectorAll('[data-toggle-paid]').forEach(btn => {
+    btn.onclick = async () => {
+      const type = btn.dataset.togglePaid;
+      const id = btn.dataset.id;
+      const item = state[type].find(x => String(x.id) === String(id));
+      if(!item) return;
+      item.paid = !item.paid;
+      item.paymentDate = item.paid ? (item.paymentDate || hoy()) : '';
+      try{
+        if(supabaseClient && !String(id).startsWith('local_')){
+          await updateRemote(type,id,{paid:item.paid,paymentDate:item.paymentDate});
+          await loadRemote();
+        }
+        saveState();
+        render();
+      }catch(err){
+        console.error(err);
+        alert('No pude actualizar.');
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-toggle-service]').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.toggleService;
+      const item = state.services.find(x => String(x.id) === String(id));
+      if(!item) return;
+      item.invoiced = !item.invoiced;
+      if(item.invoiced && !item.invoiceNumber){
+        item.invoiceNumber = prompt('Número de factura relacionada, si aplica:', '') || '';
+      }
+      try{
+        if(supabaseClient && !String(id).startsWith('local_')){
+          await updateRemote('services',id,{invoiced:item.invoiced,invoiceNumber:item.invoiceNumber});
+          await loadRemote();
+        }
+        saveState();
+        render();
+      }catch(err){
+        console.error(err);
+        alert('No pude actualizar.');
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.onclick = async () => {
+      const type = btn.dataset.delete;
+      const id = btn.dataset.id;
+      if(!confirm('¿Borrar este registro?')) return;
+      try{
+        if(supabaseClient && !String(id).startsWith('local_')){
+          await deleteRemote(type,id);
+          await loadRemote();
+        }else{
+          state[type] = state[type].filter(x => String(x.id) !== String(id));
+        }
+        saveState();
+        render();
+      }catch(err){
+        console.error(err);
+        alert('No pude borrar.');
+      }
+    };
+  });
+}
+
+function autoCalc(type){
+  const sub = document.getElementById(type+'Subtotal');
+  const iva = document.getElementById(type+'Iva');
+  const total = document.getElementById(type+'Total');
+  if(!sub || !iva || !total) return;
+
+  function update(){
+    const ivaCalc = calcIva(sub.value);
+    iva.value = ivaCalc;
+    total.value = calcTotal(sub.value, ivaCalc);
+  }
+  sub.addEventListener('input', update);
+  iva.addEventListener('input', () => total.value = calcTotal(sub.value, iva.value));
+}
+
+async function addItem(type,item){
+  try{
+    if(supabaseClient){
+      await insertRemote(type,item);
+      await loadRemote();
+    }else{
+      state[type].unshift(item);
+    }
+    saveState();
+    render();
+  }catch(err){
+    console.error(err);
+    alert('No pude guardar. Si estás usando Supabase, revisa SQL, URL, key y permisos.');
+  }
+}
+
+const SUPABASE_SQL = `-- SotoMed Control V1.1
+-- Ejecuta esto en Supabase > SQL Editor.
+-- Para esta V1 rápida se agregan políticas abiertas para anon.
+-- Úsalo como arranque; después conviene meter login y políticas por usuario.
+
+create table if not exists public.sotomed_issued_invoices (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  invoice_date date not null,
+  client text,
+  invoice_number text,
+  subtotal numeric(12,2) not null default 0,
+  iva numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  paid boolean not null default false,
+  payment_date date,
+  notes text
+);
+
+create table if not exists public.sotomed_received_invoices (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  invoice_date date not null,
+  provider text,
+  invoice_number text,
+  subtotal numeric(12,2) not null default 0,
+  iva numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  paid boolean not null default false,
+  payment_date date,
+  notes text
+);
+
+create table if not exists public.sotomed_service_sheets (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  service_date date not null,
+  client text,
+  service_number text,
+  equipment text,
+  work_done text,
+  amount numeric(12,2) not null default 0,
+  invoiced boolean not null default false,
+  invoice_number text
+);
+
+alter table public.sotomed_issued_invoices enable row level security;
+alter table public.sotomed_received_invoices enable row level security;
+alter table public.sotomed_service_sheets enable row level security;
+
+drop policy if exists "sotomed issued anon all" on public.sotomed_issued_invoices;
+drop policy if exists "sotomed received anon all" on public.sotomed_received_invoices;
+drop policy if exists "sotomed services anon all" on public.sotomed_service_sheets;
+
+create policy "sotomed issued anon all"
+on public.sotomed_issued_invoices
+for all
+to anon
+using (true)
+with check (true);
+
+create policy "sotomed received anon all"
+on public.sotomed_received_invoices
+for all
+to anon
+using (true)
+with check (true);
+
+create policy "sotomed services anon all"
+on public.sotomed_service_sheets
+for all
+to anon
+using (true)
+with check (true);
+
+create index if not exists idx_sotomed_issued_invoice_date on public.sotomed_issued_invoices(invoice_date);
+create index if not exists idx_sotomed_received_invoice_date on public.sotomed_received_invoices(invoice_date);
+create index if not exists idx_sotomed_service_date on public.sotomed_service_sheets(service_date);`;
+
+connectSupabase();
+loadRemote().then(render);
+</script>
+</body>
+</html>
