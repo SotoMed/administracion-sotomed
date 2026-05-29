@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SotoMed Control | PPD + Complementos de Pago</title>
+<title>SotoMed Control | PPD + Complementos de Pago V2.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -113,7 +113,7 @@ th{border-top:none;font-size:12px;color:#475569;text-transform:uppercase;white-s
 </div>
 <script>
 /*
-  SotoMed Control V2.0 PPD
+  SotoMed Control V2.1 PPD
   - Lee CFDI de ingreso/egreso para facturas emitidas y recibidas.
   - Lee XML de Complemento para Recepción de Pagos 2.0.
   - Relaciona pagos con facturas PPD por UUID.
@@ -243,6 +243,9 @@ function calcBaseFromTotal(total, iva){ return +(num(total) - num(iva)).toFixed(
 function pct(part,total){ return total ? Math.max(0,Math.min(100,(num(part)/num(total))*100)) : 0; }
 function extractUuidFromNotes(notes){ const m = String(notes||'').match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/); return m ? m[0].toUpperCase() : ''; }
 function sameUuid(a,b){ return String(a||'').toUpperCase() === String(b||'').toUpperCase() && !!a && !!b; }
+function rowMonth(row){ return String(row && row.date ? row.date : '').slice(0,7); }
+function monthLTE(a,b){ if(!a || !b) return true; return String(a).slice(0,7) <= String(b).slice(0,7); }
+function invoiceExistsByMonth(invoice, month){ return monthLTE(rowMonth(invoice), month); }
 function invoiceName(type,inv){ return type === 'issued' ? inv.client : inv.provider; }
 function metric(label,value,sub,status='blue'){ return `<div class="metric ${status}"><div class="l">${esc(label)}</div><div class="v">${esc(value)}</div><div class="s">${esc(sub)}</div></div>`; }
 function methodBadge(inv){
@@ -251,8 +254,12 @@ function methodBadge(inv){
   return '<span class="badge blue">PUE</span>';
 }
 
-function findPaymentsForInvoice(type, invoice){
-  return state.payments.filter(p => p.type === type && p.docs.some(d => matchDocInvoice(d, invoice)));
+function findPaymentsForInvoice(type, invoice, throughMonth=null){
+  return state.payments.filter(p => {
+    if(p.type !== type) return false;
+    if(throughMonth && !monthLTE(rowMonth(p), throughMonth)) return false;
+    return p.docs.some(d => matchDocInvoice(d, invoice));
+  });
 }
 function matchDocInvoice(doc, invoice){
   if(doc.invoiceUuid && invoice.uuid && sameUuid(doc.invoiceUuid, invoice.uuid)) return true;
@@ -260,8 +267,8 @@ function matchDocInvoice(doc, invoice){
   const docNum = String(doc.invoiceNumber || [doc.serie,doc.folio].filter(Boolean).join('-')).trim().toUpperCase();
   return !!invNum && !!docNum && invNum === docNum;
 }
-function invoicePaymentSummary(type, invoice){
-  const payments = findPaymentsForInvoice(type, invoice);
+function invoicePaymentSummary(type, invoice, throughMonth=null){
+  const payments = findPaymentsForInvoice(type, invoice, throughMonth);
   let paidTotal = 0, paidIva = 0, paidBase = 0;
   payments.forEach(p => p.docs.filter(d => matchDocInvoice(d, invoice)).forEach(d => {
     paidTotal += num(d.amountPaid);
@@ -271,11 +278,22 @@ function invoicePaymentSummary(type, invoice){
   }));
   const total = num(invoice.total);
   const isPpd = invoice.paymentMethod === 'PPD';
-  const effectivePaid = isPpd ? paidTotal : (invoice.paid || invoice.paymentMethod === 'PUE' ? total : 0);
-  const effectiveIva = isPpd ? paidIva : (effectivePaid ? num(invoice.iva) : 0);
-  const effectiveBase = isPpd ? paidBase : (effectivePaid ? num(invoice.subtotal) : 0);
+  let effectivePaid = 0, effectiveIva = 0, effectiveBase = 0;
+  if(isPpd){
+    effectivePaid = paidTotal;
+    effectiveIva = paidIva;
+    effectiveBase = paidBase;
+  }else{
+    const paidByPue = invoice.paid || invoice.paymentMethod === 'PUE';
+    const paidMonth = rowMonth({date: invoice.paymentDate || invoice.date});
+    const countsAsPaid = paidByPue && (!throughMonth || monthLTE(paidMonth, throughMonth));
+    effectivePaid = countsAsPaid ? total : 0;
+    effectiveIva = countsAsPaid ? num(invoice.iva) : 0;
+    effectiveBase = countsAsPaid ? num(invoice.subtotal) : 0;
+  }
+  const balance = Math.max(total - effectivePaid, 0);
   const status = effectivePaid >= total - 0.01 ? 'paid' : (effectivePaid > 0 ? 'partial' : 'pending');
-  return {payments, paidTotal:effectivePaid, paidIva:effectiveIva, paidBase:effectiveBase, status, progress:pct(effectivePaid,total)};
+  return {payments, paidTotal:effectivePaid, paidIva:effectiveIva, paidBase:effectiveBase, balance, status, progress:pct(effectivePaid,total)};
 }
 function estimateIvaFromPayment(amountPaid, invoice){
   const invoiceRate = invoice && num(invoice.subtotal) ? num(invoice.iva)/num(invoice.subtotal) : num(state.ivaRate)/100;
@@ -337,18 +355,20 @@ function getMonthly(){
   const services = state.services.filter(monthFilter);
   const issuedSubtotal = sum(issued,'subtotal'), issuedIva = sum(issued,'iva'), issuedTotal = sum(issued,'total');
   const receivedSubtotal = sum(received,'subtotal'), receivedIva = sum(received,'iva'), receivedTotal = sum(received,'total');
-  const collected = state.issued.reduce((acc,inv)=> acc + invoicePaymentSummary('issued',inv).paidTotal, 0);
-  const issuedTotalAll = state.issued.reduce((acc,inv)=>acc+num(inv.total),0);
-  const paidExpenses = state.received.reduce((acc,inv)=> acc + invoicePaymentSummary('received',inv).paidTotal, 0);
-  const receivedTotalAll = state.received.reduce((acc,inv)=>acc+num(inv.total),0);
-  const receivable = issuedTotalAll - collected;
-  const payable = receivedTotalAll - paidExpenses;
+  const issuedAsOf = state.issued.filter(inv => invoiceExistsByMonth(inv, state.month));
+  const receivedAsOf = state.received.filter(inv => invoiceExistsByMonth(inv, state.month));
+  const collected = issuedAsOf.reduce((acc,inv)=> acc + invoicePaymentSummary('issued',inv,state.month).paidTotal, 0);
+  const issuedTotalAsOf = issuedAsOf.reduce((acc,inv)=>acc+num(inv.total),0);
+  const paidExpenses = receivedAsOf.reduce((acc,inv)=> acc + invoicePaymentSummary('received',inv,state.month).paidTotal, 0);
+  const receivedTotalAsOf = receivedAsOf.reduce((acc,inv)=>acc+num(inv.total),0);
+  const receivable = Math.max(issuedTotalAsOf - collected,0);
+  const payable = Math.max(receivedTotalAsOf - paidExpenses,0);
   const pendingServices = services.filter(x=>!x.invoiced);
   const tax = cashTaxForMonth(state.month);
-  const ppdIssued = state.issued.filter(x => x.paymentMethod === 'PPD');
-  const ppdReceived = state.received.filter(x => x.paymentMethod === 'PPD');
-  const ppdIssuedPending = ppdIssued.filter(x => invoicePaymentSummary('issued',x).status !== 'paid');
-  const ppdReceivedPending = ppdReceived.filter(x => invoicePaymentSummary('received',x).status !== 'paid');
+  const ppdIssued = issuedAsOf.filter(x => x.paymentMethod === 'PPD');
+  const ppdReceived = receivedAsOf.filter(x => x.paymentMethod === 'PPD');
+  const ppdIssuedPending = ppdIssued.filter(x => invoicePaymentSummary('issued',x,state.month).status !== 'paid');
+  const ppdReceivedPending = ppdReceived.filter(x => invoicePaymentSummary('received',x,state.month).status !== 'paid');
   return {issued,received,payments,services,issuedSubtotal,issuedIva,issuedTotal,receivedSubtotal,receivedIva,receivedTotal,collected,receivable,paidExpenses,payable,pendingServices,servicePendingAmount:sum(pendingServices,'amount'),tax,ppdIssued,ppdReceived,ppdIssuedPending,ppdReceivedPending};
 }
 
@@ -518,6 +538,14 @@ function attachXmlImport(type){
     catch(err){ console.error(err); alert(err.message || 'No pude leer el XML.'); }
   });
 }
+function paymentSignature(p){
+  const docs = (p.docs || []).map(d => [String(d.invoiceUuid||'').toUpperCase(), num(d.amountPaid).toFixed(2), String(d.partiality||'')].join(':')).sort().join('|');
+  return [String(p.paymentUuid||'').toUpperCase(), rowMonth(p), p.date, p.type, num(p.amount).toFixed(2), docs].join('::');
+}
+function paymentAlreadyExists(p){
+  const sig = paymentSignature(p);
+  return state.payments.some(existing => paymentSignature(existing) === sig);
+}
 async function importPaymentXmlFiles(){
   const input = document.getElementById('paymentXmlFiles');
   const select = document.getElementById('paymentImportType');
@@ -529,7 +557,11 @@ async function importPaymentXmlFiles(){
     try{
       const txt = await file.text();
       const payments = parsePaymentComplementXml(txt,file.name,typeHint);
-      for(const p of payments){ await addItem('payments',p,false); imported.push(p); }
+      for(const p of payments){
+        if(paymentAlreadyExists(p)){ errors.push(file.name + ': ya estaba importado, se omitió para no duplicar abonos.'); continue; }
+        await addItem('payments',p,false);
+        imported.push(p);
+      }
     }catch(err){ console.error(err); errors.push(file.name + ': ' + (err.message || 'No pude leer el XML')); }
   }
   saveState();
@@ -570,16 +602,17 @@ function viewDashboard(){
     ${metric('Gastos base flujo', money(t.cashExpenseBase), 'Subtotal PUE pagado + base PPD pagada', 'blue')}
     ${metric('Utilidad base flujo', money(t.profitBase), 'Ingresos base - gastos base', t.profitBase>=0?'good':'bad')}
     ${metric('Resultado después impuestos', money(t.profitBase - Math.max(t.ivaToPay,0) - t.estimatedIsr), 'Estimación interna', 'purple')}
-    ${metric('Por cobrar total', money(m.receivable), `${m.ppdIssuedPending.length} PPD pendientes`, m.receivable>0?'warn':'good')}
-    ${metric('Por pagar total', money(m.payable), `${m.ppdReceivedPending.length} PPD pendientes`, m.payable>0?'warn':'good')}
+    ${metric('Por cobrar total', money(m.receivable), `${m.ppdIssuedPending.length} PPD pendientes al cierre`, m.receivable>0?'warn':'good')}
+    ${metric('Por pagar total', money(m.payable), `${m.ppdReceivedPending.length} PPD pendientes al cierre`, m.payable>0?'warn':'good')}
     ${metric('Complementos del mes', String(m.payments.length), `${m.payments.filter(x=>x.type==='issued').length} cobros · ${m.payments.filter(x=>x.type==='received').length} pagos`, 'purple')}
     ${metric('Servicios por facturar', money(m.servicePendingAmount), `${m.pendingServices.length} hojas pendientes`, m.pendingServices.length?'warn':'good')}
   </div>
   <div class="grid-2">
     <div class="card"><h3>Lectura fiscal rápida</h3><p class="sub">Lo importante para facturas PPD.</p><div class="note-box"><b>PPD no debe mover IVA por fecha de factura.</b> En esta versión el IVA PPD se mueve al mes del complemento de pago.<br><br><b>Cobros PPD del mes:</b> ${money(t.issuedPpdTotal)} · IVA ${money(t.issuedPpdIva)}<br><b>Pagos PPD del mes:</b> ${money(t.receivedPpdTotal)} · IVA ${money(t.receivedPpdIva)}<br><b>IVA neto estimado:</b> ${money(t.ivaToPay)}</div></div>
-    <div class="card"><h3>Pendientes de control</h3><p class="sub">Para no olvidar complementos.</p><div class="note-box"><b>Facturas PPD emitidas pendientes:</b> ${m.ppdIssuedPending.length}<br><b>Facturas PPD recibidas pendientes:</b> ${m.ppdReceivedPending.length}<br><b>Facturas emitidas del mes:</b> ${m.issued.length} · ${money(m.issuedTotal)}<br><b>Facturas recibidas del mes:</b> ${m.received.length} · ${money(m.receivedTotal)}<br><br>Cuando cargues el XML de pago, el sistema lo relaciona por UUID de la factura.</div></div>
+    <div class="card"><h3>Pendientes de control</h3><p class="sub">Arrastre calculado al cierre del mes seleccionado.</p><div class="note-box"><b>Facturas PPD emitidas pendientes al cierre:</b> ${m.ppdIssuedPending.length}<br><b>Facturas PPD recibidas pendientes al cierre:</b> ${m.ppdReceivedPending.length}<br><b>Facturas emitidas del mes:</b> ${m.issued.length} · ${money(m.issuedTotal)}<br><b>Facturas recibidas del mes:</b> ${m.received.length} · ${money(m.receivedTotal)}<br><br>Cuando cargues el XML de pago, el sistema relaciona por UUID, abona a la factura y recalcula el saldo histórico sin mover meses anteriores.</div></div>
   </div>
-  <div class="table-title">Facturas PPD emitidas pendientes</div>${invoiceTable('issued', m.ppdIssuedPending.slice(0,8), true)}
+  <div class="table-title">Cartera PPD emitida arrastrada al cierre del mes</div>${invoiceTable('issued', m.ppdIssuedPending.slice(0,8), true)}
+  <div class="table-title">PPD recibidas pendientes al cierre del mes</div>${invoiceTable('received', m.ppdReceivedPending.slice(0,8), true)}
   <div class="table-title">Complementos del mes</div>${paymentsTable(m.payments.slice(0,8), true)}`;
 }
 function invoiceForm(type){
@@ -614,7 +647,7 @@ function viewPayments(){
   const rows = state.payments.filter(monthFilter);
   const issuedRows = rows.filter(x=>x.type==='issued'), receivedRows = rows.filter(x=>x.type==='received');
   return `<div class="section-title"><div><h2>Complementos de pago</h2><p>Aquí cargas los XML de Complemento de Recepción de Pagos. El sistema toma FechaPago, Monto, UUID del pago, documentos relacionados, ImpPagado, saldo insoluto e IVA trasladado del pago.</p></div>${monthBox()}</div>
-  <div class="grid-2"><div class="card"><h3>Subir XML de complemento</h3><p class="sub">Puedes subir uno o varios XML. Si el UUID relacionado existe en tus facturas, se relaciona automáticamente.</p><div class="xml-box"><b>Importar complemento de pago XML</b><br><select id="paymentImportType"><option value="auto">Automático por UUID</option><option value="issued" selected>Cobro de cliente - factura emitida</option><option value="received">Pago a proveedor - factura recibida</option></select><input type="file" id="paymentXmlFiles" accept=".xml,text/xml,application/xml" multiple><div id="paymentXmlPreview" style="margin-top:10px">Todavía no has cargado complementos.</div></div><div class="alert-box"><b>Tip:</b> Para facturas emitidas PPD, el complemento normalmente lo emites tú cuando recibes el pago. Para facturas recibidas PPD, tu proveedor te emite el complemento cuando le pagas.</div></div>
+  <div class="grid-2"><div class="card"><h3>Subir XML de complemento</h3><p class="sub">Puedes subir uno o varios XML. Si el UUID relacionado existe en tus facturas, se relaciona automáticamente.</p><div class="xml-box"><b>Importar complemento de pago XML</b><br><select id="paymentImportType"><option value="auto" selected>Automático por UUID</option><option value="issued">Cobro de cliente - factura emitida</option><option value="received">Pago a proveedor - factura recibida</option></select><input type="file" id="paymentXmlFiles" accept=".xml,text/xml,application/xml" multiple><div id="paymentXmlPreview" style="margin-top:10px">Todavía no has cargado complementos.</div></div><div class="alert-box"><b>Tip:</b> Para facturas emitidas PPD, el complemento normalmente lo emites tú cuando recibes el pago. Para facturas recibidas PPD, tu proveedor te emite el complemento cuando le pagas.</div></div>
   <div class="card"><h3>Resumen del mes</h3><p class="sub">Complementos registrados en el mes seleccionado.</p><div class="metrics" style="grid-template-columns:1fr 1fr">${metric('Cobros cliente', money(sum(issuedRows,'amount')), `${issuedRows.length} complementos`, 'good')}${metric('IVA cobrado PPD', money(sum(issuedRows,'iva')), 'Desde complementos', 'warn')}${metric('Pagos proveedor', money(sum(receivedRows,'amount')), `${receivedRows.length} complementos`, 'blue')}${metric('IVA acreditable PPD', money(sum(receivedRows,'iva')), 'Desde complementos', 'good')}</div></div></div>
   <div class="table-title">Complementos registrados</div>${paymentsTable(rows)}`;
 }
@@ -682,7 +715,7 @@ async function addItem(type,item,refresh=true){
     saveState(); if(refresh) render();
   }catch(err){ console.error(err); alert('No pude guardar. Si estás usando Supabase, ejecuta el SQL V2 y revisa URL, key y permisos. Detalle: ' + (err.message || '')); }
 }
-const SUPABASE_SQL = `-- SotoMed Control V2.0 PPD + Complementos de Pago
+const SUPABASE_SQL = `-- SotoMed Control V2.1 PPD + Complementos de Pago
 -- Ejecuta esto en Supabase > SQL Editor.
 -- Primero conserva tus tablas actuales y agrega columnas para UUID, PUE/PPD y complementos.
 -- Nota de seguridad: estas políticas abiertas sirven para arranque sin login. En producción conviene usar autenticación y RLS por usuario.
