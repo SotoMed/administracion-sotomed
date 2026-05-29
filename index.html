@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SotoMed Control | Administración simple + XML CFDI + autoactualización</title>
+<title>SotoMed Control | PPD + Complementos de Pago</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -18,6 +18,7 @@
   --amber:#f59e0b;
   --red:#e11d48;
   --blue:#2563eb;
+  --purple:#7c3aed;
   --shadow:0 10px 24px rgba(15,23,42,.07);
 }
 *{box-sizing:border-box}
@@ -25,14 +26,8 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 h1,h2,h3,p{margin:0}
-.wrap{max-width:1180px;margin:0 auto;padding:20px}
-.top{
-  background:linear-gradient(135deg,var(--navy),#155ca8);
-  color:#fff;
-  padding:24px;
-  border-radius:24px;
-  box-shadow:var(--shadow);
-}
+.wrap{max-width:1240px;margin:0 auto;padding:20px}
+.top{background:linear-gradient(135deg,var(--navy),#155ca8);color:#fff;padding:24px;border-radius:24px;box-shadow:var(--shadow)}
 .top h1{font-size:30px;letter-spacing:-.03em}
 .top p{margin-top:8px;color:#dbeafe;line-height:1.5}
 .top-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
@@ -40,9 +35,7 @@ h1,h2,h3,p{margin:0}
 .status-dot{width:10px;height:10px;border-radius:999px;background:#fbbf24}
 .status-dot.ok{background:#34d399}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-.tab-btn,.save-btn,.ghost-btn,.danger-btn,.small-btn{
-  border:none;border-radius:14px;padding:10px 14px;font-weight:800;
-}
+.tab-btn,.save-btn,.ghost-btn,.danger-btn,.small-btn{border:none;border-radius:14px;padding:10px 14px;font-weight:800}
 .tab-btn,.ghost-btn,.small-btn{background:#fff;color:#0f172a;border:1px solid var(--line)}
 .tab-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
 .save-btn{background:linear-gradient(135deg,var(--teal),#0b8f8e);color:#fff}
@@ -51,12 +44,10 @@ h1,h2,h3,p{margin:0}
 .panel{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px}
 .section-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .section-title h2{font-size:26px;letter-spacing:-.03em}
-.section-title p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.5}
+.section-title p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.5;max-width:760px}
 .month-box{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:10px}
 .month-box label{font-size:13px;font-weight:800;color:#475569}
-input,select,textarea{
-  width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;
-}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a}
 textarea{min-height:86px;resize:vertical}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden}
@@ -65,6 +56,7 @@ textarea{min-height:86px;resize:vertical}
 .metric.warn::before{background:var(--amber)}
 .metric.bad::before{background:var(--red)}
 .metric.blue::before{background:var(--blue)}
+.metric.purple::before{background:var(--purple)}
 .metric .l{font-size:13px;color:var(--muted)}
 .metric .v{margin-top:8px;font-size:27px;font-weight:900;letter-spacing:-.03em}
 .metric .s{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.45}
@@ -74,6 +66,7 @@ textarea{min-height:86px;resize:vertical}
 .card h3{font-size:20px;letter-spacing:-.02em}
 .card p.sub{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.5}
 .form{display:grid;gap:10px;margin-top:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field{display:grid;gap:5px}
 .field label{font-size:12px;font-weight:800;color:#475569}
 .check{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;font-size:14px;font-weight:700;color:#475569}
@@ -82,27 +75,26 @@ textarea{min-height:86px;resize:vertical}
 .note-box{margin-top:16px;padding:14px;border-radius:16px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.6}
 .note-box b{color:#334155}
 .xml-box{margin-top:14px;padding:14px;border-radius:16px;background:#eef6ff;border:1px dashed #93c5fd;color:#1e3a8a;font-size:13px;line-height:1.55}
-.xml-box input{margin-top:8px;background:#fff}
+.xml-box input,.xml-box select{margin-top:8px;background:#fff}
+.alert-box{margin-top:14px;padding:14px;border-radius:16px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.55}
 .table-title{margin-top:18px;font-size:18px;font-weight:900}
 .table-wrap{margin-top:10px;border:1px solid var(--line);border-radius:18px;overflow:auto;background:#fff}
-table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:920px}
 thead{background:#f8fafc}
 th,td{padding:12px;text-align:left;border-top:1px solid #eef2f7;vertical-align:top}
 th{border-top:none;font-size:12px;color:#475569;text-transform:uppercase;white-space:nowrap}
-.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2f7;font-size:12px;font-weight:800}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2f7;font-size:12px;font-weight:800;white-space:nowrap}
 .badge.good{background:#ecfdf5;color:#166534}
 .badge.warn{background:#fffbeb;color:#92400e}
 .badge.bad{background:#fff1f2;color:#9f1239}
+.badge.blue{background:#eff6ff;color:#1d4ed8}
+.badge.purple{background:#f5f3ff;color:#6d28d9}
 .empty{padding:24px;text-align:center;color:#64748b}
-.danger-text{color:#be123c}
-.good-text{color:#047857}
-.code{
-  display:block;width:100%;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:16px;padding:14px;line-height:1.45;font-size:12px;max-height:320px;overflow:auto;
-}
-@media (max-width:1000px){
-  .metrics,.grid-2,.grid-3{grid-template-columns:1fr}
-  .metric .v{font-size:24px}
-}
+.danger-text{color:#be123c}.good-text{color:#047857}.muted{color:#64748b}.nowrap{white-space:nowrap}
+.code{display:block;width:100%;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#e2e8f0;border-radius:16px;padding:14px;line-height:1.45;font-size:12px;max-height:360px;overflow:auto}
+.progress{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:7px;min-width:110px}
+.progress > span{display:block;height:100%;background:var(--teal);width:0%}
+@media (max-width:1000px){.metrics,.grid-2,.grid-3,.form-row{grid-template-columns:1fr}.metric .v{font-size:24px}}
 </style>
 </head>
 <body>
@@ -111,41 +103,38 @@ th{border-top:none;font-size:12px;color:#475569;text-transform:uppercase;white-s
     <div class="top-row">
       <div>
         <h1>SotoMed Control</h1>
-        <p>Administración simple: facturas emitidas, facturas recibidas, IVA, ISR estimado, cobranza, cuentas por pagar y hojas de servicio.</p>
+        <p>Administración simple con facturas PUE/PPD, XML CFDI, complementos de pago, IVA efectivamente cobrado/pagado, cobranza, cuentas por pagar y hojas de servicio.</p>
       </div>
       <div class="status-pill" id="connectionStatus"><span class="status-dot"></span> Modo local</div>
     </div>
     <div class="tabs" id="tabs"></div>
   </div>
-
   <div class="panel" id="main"></div>
 </div>
-
 <script>
 /*
-  SotoMed Control V1.1
-  - Funciona en modo local con localStorage.
-  - Lee XML CFDI para llenar facturas emitidas y recibidas.
-  - Para usar Supabase: pega URL y Publishable/Anon Key en Configuración y ejecuta el SQL incluido en el archivo sotomed_supabase.sql.
-  - Esta V1 es control interno; valida impuestos finales con tu contador.
+  SotoMed Control V2.0 PPD
+  - Lee CFDI de ingreso/egreso para facturas emitidas y recibidas.
+  - Lee XML de Complemento para Recepción de Pagos 2.0.
+  - Relaciona pagos con facturas PPD por UUID.
+  - Calcula IVA estimado por flujo efectivo: PUE + pagos relacionados en complementos.
+  - Validar siempre con contador/SAT antes de presentar declaraciones.
 */
-
 const TABLES = {
   issued:'sotomed_issued_invoices',
   received:'sotomed_received_invoices',
-  services:'sotomed_service_sheets'
+  services:'sotomed_service_sheets',
+  payments:'sotomed_payment_complements'
 };
-
 const STORAGE_KEY = 'sotomed_control_v1';
-
 const tabs = [
   ['dashboard','Dashboard'],
   ['issued','Emitidas'],
   ['received','Recibidas'],
+  ['payments','Complementos'],
   ['services','Servicios'],
   ['settings','Configuración']
 ];
-
 const seed = {
   activeTab:'dashboard',
   month: new Date().toISOString().slice(0,7),
@@ -155,14 +144,11 @@ const seed = {
   supabaseKey:'sb_publishable_Nei-DTUW7PhVnrKHYHCM8g_9aWq7rvb',
   issued:[],
   received:[],
+  payments:[],
   services:[]
 };
-
-let state = loadState();
+let state = normalizeState(loadState());
 let supabaseClient = null;
-let autoSyncHandle = null;
-let lastAutoSyncAt = '';
-const AUTO_SYNC_MS = 5000;
 
 function loadState(){
   try{
@@ -174,188 +160,239 @@ function loadState(){
       supabaseKey: parsed.supabaseKey || seed.supabaseKey,
       issued:Array.isArray(parsed.issued)?parsed.issued:[],
       received:Array.isArray(parsed.received)?parsed.received:[],
+      payments:Array.isArray(parsed.payments)?parsed.payments:[],
       services:Array.isArray(parsed.services)?parsed.services:[]
     };
-  }catch(err){
-    return {...seed};
+  }catch(err){ return {...seed}; }
+}
+function normalizeState(s){
+  s.issued = (s.issued || []).map(x => normalizeInvoice(x,'issued'));
+  s.received = (s.received || []).map(x => normalizeInvoice(x,'received'));
+  s.payments = (s.payments || []).map(normalizePayment);
+  s.services = s.services || [];
+  return s;
+}
+function normalizeInvoice(x,type){
+  const isPaid = !!x.paid;
+  return {
+    id:x.id || uid(), date:x.date || x.invoice_date || hoy(),
+    client:x.client || '', provider:x.provider || '', invoiceNumber:x.invoiceNumber || x.invoice_number || '',
+    subtotal:num(x.subtotal), iva:num(x.iva), total:num(x.total), paid:isPaid,
+    paymentDate:x.paymentDate || x.payment_date || '', notes:x.notes || '',
+    uuid: x.uuid || x.cfdi_uuid || extractUuidFromNotes(x.notes || ''),
+    paymentMethod: x.paymentMethod || x.payment_method || x.methodPayment || 'PUE',
+    paymentForm: x.paymentForm || x.payment_form || '',
+    currency: x.currency || x.moneda || 'MXN',
+    cfdiType: x.cfdiType || x.cfdi_type || (type === 'issued' ? 'I' : 'I')
+  };
+}
+function normalizePayment(x){
+  let docs = x.docs || x.relatedDocs || x.related_docs || [];
+  if(typeof docs === 'string'){
+    try{ docs = JSON.parse(docs); }catch(e){ docs = []; }
   }
+  if(!Array.isArray(docs)) docs = [];
+  return {
+    id:x.id || uid(),
+    date:x.date || x.payment_date || hoy(),
+    type:x.type || x.payment_type || 'issued',
+    paymentUuid:x.paymentUuid || x.payment_uuid || x.uuid || '',
+    payer:x.payer || '',
+    receiver:x.receiver || '',
+    amount:num(x.amount),
+    iva:num(x.iva),
+    currency:x.currency || 'MXN',
+    paymentForm:x.paymentForm || x.payment_form || '',
+    fileName:x.fileName || x.file_name || '',
+    notes:x.notes || '',
+    docs: docs.map(d => ({
+      invoiceUuid:d.invoiceUuid || d.invoice_uuid || d.idDocumento || d.IdDocumento || '',
+      serie:d.serie || d.Serie || '',
+      folio:d.folio || d.Folio || '',
+      invoiceNumber:d.invoiceNumber || [d.serie || d.Serie, d.folio || d.Folio].filter(Boolean).join('-'),
+      partiality:d.partiality || d.NumParcialidad || '',
+      previousBalance:num(d.previousBalance || d.ImpSaldoAnt),
+      amountPaid:num(d.amountPaid || d.ImpPagado),
+      remainingBalance:num(d.remainingBalance || d.ImpSaldoInsoluto),
+      taxBase:num(d.taxBase || d.BaseDR),
+      ivaPaid:num(d.ivaPaid || d.ImporteDR),
+      taxRate:num(d.taxRate || d.TasaOCuotaDR)
+    }))
+  };
 }
-
-function saveState(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function normalizeSupabaseUrl(url){
-  return String(url || '').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/+$/,'');
-}
-
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function connectSupabase(){
-  state.supabaseUrl = normalizeSupabaseUrl(state.supabaseUrl);
-  if(state.supabaseUrl && state.supabaseKey && window.supabase){
-    supabaseClient = supabase.createClient(state.supabaseUrl, state.supabaseKey);
-  }else{
-    supabaseClient = null;
-  }
+  if(state.supabaseUrl && state.supabaseKey && window.supabase){ supabaseClient = supabase.createClient(state.supabaseUrl, state.supabaseKey); }
+  else{ supabaseClient = null; }
   updateConnectionStatus();
 }
-
 function updateConnectionStatus(){
-  const el = document.getElementById('connectionStatus');
-  if(!el) return;
-  if(supabaseClient){
-    el.innerHTML = '<span class="status-dot ok"></span> Supabase activo · auto';
-  }else{
-    el.innerHTML = '<span class="status-dot"></span> Modo local';
-  }
+  const el = document.getElementById('connectionStatus'); if(!el) return;
+  el.innerHTML = supabaseClient ? '<span class="status-dot ok"></span> Supabase activo' : '<span class="status-dot"></span> Modo local';
 }
-
 function hoy(){ return new Date().toISOString().slice(0,10); }
-function uid(){ return 'local_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
-function money(n){ return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function uid(){ return 'local_' + Date.now() + '_' + Math.floor(Math.random()*100000); }
+function money(n){ return '$' + Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function num(v){ return Number(String(v ?? '').replaceAll(',','')) || 0; }
-function esc(v){
-  return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-}
+function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 function monthFilter(row){ return String(row.date || '').slice(0,7) === state.month; }
 function sum(list,key){ return list.reduce((a,b)=>a+num(b[key]),0); }
 function calcIva(subtotal){ return +(num(subtotal) * (num(state.ivaRate)/100)).toFixed(2); }
 function calcTotal(subtotal, iva){ return +(num(subtotal) + num(iva)).toFixed(2); }
-
-function metric(label,value,sub,status='blue'){
-  return `<div class="metric ${status}"><div class="l">${esc(label)}</div><div class="v">${esc(value)}</div><div class="s">${esc(sub)}</div></div>`;
+function calcBaseFromTotal(total, iva){ return +(num(total) - num(iva)).toFixed(2); }
+function pct(part,total){ return total ? Math.max(0,Math.min(100,(num(part)/num(total))*100)) : 0; }
+function extractUuidFromNotes(notes){ const m = String(notes||'').match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/); return m ? m[0].toUpperCase() : ''; }
+function sameUuid(a,b){ return String(a||'').toUpperCase() === String(b||'').toUpperCase() && !!a && !!b; }
+function invoiceName(type,inv){ return type === 'issued' ? inv.client : inv.provider; }
+function metric(label,value,sub,status='blue'){ return `<div class="metric ${status}"><div class="l">${esc(label)}</div><div class="v">${esc(value)}</div><div class="s">${esc(sub)}</div></div>`; }
+function methodBadge(inv){
+  const m = inv.paymentMethod || 'PUE';
+  if(m === 'PPD') return '<span class="badge purple">PPD</span>';
+  return '<span class="badge blue">PUE</span>';
 }
 
+function findPaymentsForInvoice(type, invoice){
+  return state.payments.filter(p => p.type === type && p.docs.some(d => matchDocInvoice(d, invoice)));
+}
+function matchDocInvoice(doc, invoice){
+  if(doc.invoiceUuid && invoice.uuid && sameUuid(doc.invoiceUuid, invoice.uuid)) return true;
+  const invNum = String(invoice.invoiceNumber || '').trim().toUpperCase();
+  const docNum = String(doc.invoiceNumber || [doc.serie,doc.folio].filter(Boolean).join('-')).trim().toUpperCase();
+  return !!invNum && !!docNum && invNum === docNum;
+}
+function invoicePaymentSummary(type, invoice){
+  const payments = findPaymentsForInvoice(type, invoice);
+  let paidTotal = 0, paidIva = 0, paidBase = 0;
+  payments.forEach(p => p.docs.filter(d => matchDocInvoice(d, invoice)).forEach(d => {
+    paidTotal += num(d.amountPaid);
+    const ivaDoc = num(d.ivaPaid) || estimateIvaFromPayment(d.amountPaid, invoice);
+    paidIva += ivaDoc;
+    paidBase += num(d.taxBase) || calcBaseFromTotal(d.amountPaid, ivaDoc);
+  }));
+  const total = num(invoice.total);
+  const isPpd = invoice.paymentMethod === 'PPD';
+  const effectivePaid = isPpd ? paidTotal : (invoice.paid || invoice.paymentMethod === 'PUE' ? total : 0);
+  const effectiveIva = isPpd ? paidIva : (effectivePaid ? num(invoice.iva) : 0);
+  const effectiveBase = isPpd ? paidBase : (effectivePaid ? num(invoice.subtotal) : 0);
+  const status = effectivePaid >= total - 0.01 ? 'paid' : (effectivePaid > 0 ? 'partial' : 'pending');
+  return {payments, paidTotal:effectivePaid, paidIva:effectiveIva, paidBase:effectiveBase, status, progress:pct(effectivePaid,total)};
+}
+function estimateIvaFromPayment(amountPaid, invoice){
+  const invoiceRate = invoice && num(invoice.subtotal) ? num(invoice.iva)/num(invoice.subtotal) : num(state.ivaRate)/100;
+  return +(num(amountPaid) - (num(amountPaid)/(1+invoiceRate))).toFixed(2);
+}
+function findInvoiceByDoc(type, doc){
+  const list = type === 'issued' ? state.issued : state.received;
+  return list.find(inv => matchDocInvoice(doc, inv));
+}
+function inferPaymentType(payment){
+  const issuedHits = payment.docs.filter(d => state.issued.some(inv => matchDocInvoice(d,inv))).length;
+  const receivedHits = payment.docs.filter(d => state.received.some(inv => matchDocInvoice(d,inv))).length;
+  if(issuedHits > receivedHits) return 'issued';
+  if(receivedHits > issuedHits) return 'received';
+  return payment.type || 'issued';
+}
+
+function cashTaxForMonth(month){
+  const issuedPue = state.issued.filter(inv => inv.paymentMethod !== 'PPD' && String(inv.date||'').slice(0,7) === month && (inv.paid || inv.paymentMethod === 'PUE'));
+  const receivedPue = state.received.filter(inv => inv.paymentMethod !== 'PPD' && String((inv.paymentDate || inv.date)||'').slice(0,7) === month && (inv.paid || inv.paymentMethod === 'PUE'));
+  const monthPayments = state.payments.filter(p => String(p.date||'').slice(0,7) === month);
+  const issuedPpd = monthPayments.filter(p => p.type === 'issued');
+  const receivedPpd = monthPayments.filter(p => p.type === 'received');
+
+  const issuedPueBase = sum(issuedPue,'subtotal');
+  const issuedPueIva = sum(issuedPue,'iva');
+  const receivedPueBase = sum(receivedPue,'subtotal');
+  const receivedPueIva = sum(receivedPue,'iva');
+
+  let issuedPpdBase = 0, issuedPpdIva = 0, issuedPpdTotal = 0;
+  issuedPpd.forEach(p => p.docs.forEach(d => {
+    const inv = findInvoiceByDoc('issued',d);
+    const iva = num(d.ivaPaid) || estimateIvaFromPayment(d.amountPaid, inv);
+    issuedPpdIva += iva;
+    issuedPpdBase += num(d.taxBase) || calcBaseFromTotal(d.amountPaid, iva);
+    issuedPpdTotal += num(d.amountPaid);
+  }));
+  let receivedPpdBase = 0, receivedPpdIva = 0, receivedPpdTotal = 0;
+  receivedPpd.forEach(p => p.docs.forEach(d => {
+    const inv = findInvoiceByDoc('received',d);
+    const iva = num(d.ivaPaid) || estimateIvaFromPayment(d.amountPaid, inv);
+    receivedPpdIva += iva;
+    receivedPpdBase += num(d.taxBase) || calcBaseFromTotal(d.amountPaid, iva);
+    receivedPpdTotal += num(d.amountPaid);
+  }));
+
+  const ivaCollected = issuedPueIva + issuedPpdIva;
+  const ivaCreditable = receivedPueIva + receivedPpdIva;
+  const ivaToPay = ivaCollected - ivaCreditable;
+  const cashIncomeBase = issuedPueBase + issuedPpdBase;
+  const cashExpenseBase = receivedPueBase + receivedPpdBase;
+  const profitBase = cashIncomeBase - cashExpenseBase;
+  return {issuedPue, receivedPue, issuedPpd, receivedPpd, issuedPueBase, issuedPueIva, receivedPueBase, receivedPueIva, issuedPpdBase, issuedPpdIva, issuedPpdTotal, receivedPpdBase, receivedPpdIva, receivedPpdTotal, ivaCollected, ivaCreditable, ivaToPay, cashIncomeBase, cashExpenseBase, profitBase, estimatedIsr:Math.max(profitBase,0)*(num(state.isrRate)/100)};
+}
 function getMonthly(){
   const issued = state.issued.filter(monthFilter);
   const received = state.received.filter(monthFilter);
+  const payments = state.payments.filter(monthFilter);
   const services = state.services.filter(monthFilter);
-
-  const issuedSubtotal = sum(issued,'subtotal');
-  const issuedIva = sum(issued,'iva');
-  const issuedTotal = sum(issued,'total');
-  const receivedSubtotal = sum(received,'subtotal');
-  const receivedIva = sum(received,'iva');
-  const receivedTotal = sum(received,'total');
-
-  const collected = sum(issued.filter(x=>x.paid),'total');
-  const receivable = sum(issued.filter(x=>!x.paid),'total');
-  const paidExpenses = sum(received.filter(x=>x.paid),'total');
-  const payable = sum(received.filter(x=>!x.paid),'total');
-
-  const ivaToPay = issuedIva - receivedIva;
-  const estimatedProfit = collected - paidExpenses;
-  const estimatedIsr = Math.max(estimatedProfit,0) * (num(state.isrRate)/100);
+  const issuedSubtotal = sum(issued,'subtotal'), issuedIva = sum(issued,'iva'), issuedTotal = sum(issued,'total');
+  const receivedSubtotal = sum(received,'subtotal'), receivedIva = sum(received,'iva'), receivedTotal = sum(received,'total');
+  const collected = state.issued.reduce((acc,inv)=> acc + invoicePaymentSummary('issued',inv).paidTotal, 0);
+  const issuedTotalAll = state.issued.reduce((acc,inv)=>acc+num(inv.total),0);
+  const paidExpenses = state.received.reduce((acc,inv)=> acc + invoicePaymentSummary('received',inv).paidTotal, 0);
+  const receivedTotalAll = state.received.reduce((acc,inv)=>acc+num(inv.total),0);
+  const receivable = issuedTotalAll - collected;
+  const payable = receivedTotalAll - paidExpenses;
   const pendingServices = services.filter(x=>!x.invoiced);
-  const servicePendingAmount = sum(pendingServices,'amount');
-
-  return {
-    issued, received, services,
-    issuedSubtotal, issuedIva, issuedTotal,
-    receivedSubtotal, receivedIva, receivedTotal,
-    collected, receivable, paidExpenses, payable,
-    ivaToPay, estimatedProfit, estimatedIsr,
-    pendingServices, servicePendingAmount
-  };
+  const tax = cashTaxForMonth(state.month);
+  const ppdIssued = state.issued.filter(x => x.paymentMethod === 'PPD');
+  const ppdReceived = state.received.filter(x => x.paymentMethod === 'PPD');
+  const ppdIssuedPending = ppdIssued.filter(x => invoicePaymentSummary('issued',x).status !== 'paid');
+  const ppdReceivedPending = ppdReceived.filter(x => invoicePaymentSummary('received',x).status !== 'paid');
+  return {issued,received,payments,services,issuedSubtotal,issuedIva,issuedTotal,receivedSubtotal,receivedIva,receivedTotal,collected,receivable,paidExpenses,payable,pendingServices,servicePendingAmount:sum(pendingServices,'amount'),tax,ppdIssued,ppdReceived,ppdIssuedPending,ppdReceivedPending};
 }
 
-async function loadRemote(showAlert = true){
-  if(!supabaseClient) return false;
+async function loadRemote(){
+  if(!supabaseClient) return;
   try{
     const [i,r,s] = await Promise.all([
-      supabaseClient.from(TABLES.issued).select('*').order('invoice_date', {ascending:false}),
-      supabaseClient.from(TABLES.received).select('*').order('invoice_date', {ascending:false}),
-      supabaseClient.from(TABLES.services).select('*').order('service_date', {ascending:false})
+      supabaseClient.from(TABLES.issued).select('*').order('invoice_date',{ascending:false}),
+      supabaseClient.from(TABLES.received).select('*').order('invoice_date',{ascending:false}),
+      supabaseClient.from(TABLES.services).select('*').order('service_date',{ascending:false})
     ]);
-
-    if(i.error || r.error || s.error){
-      if(showAlert) alert('No pude cargar Supabase. Revisa que ya ejecutaste el SQL y que la URL/Key sean correctas.');
-      console.error(i.error || r.error || s.error);
-      return false;
-    }
-
-    state.issued = (i.data || []).map(row => ({
-      id:row.id, date:row.invoice_date, client:row.client || '', invoiceNumber:row.invoice_number || '',
-      subtotal:num(row.subtotal), iva:num(row.iva), total:num(row.total), paid:!!row.paid,
-      paymentDate:row.payment_date || '', notes:row.notes || ''
-    }));
-
-    state.received = (r.data || []).map(row => ({
-      id:row.id, date:row.invoice_date, provider:row.provider || '', invoiceNumber:row.invoice_number || '',
-      subtotal:num(row.subtotal), iva:num(row.iva), total:num(row.total), paid:!!row.paid,
-      paymentDate:row.payment_date || '', notes:row.notes || ''
-    }));
-
+    if(i.error || r.error || s.error){ alert('No pude cargar Supabase. Revisa que ejecutaste el SQL base.'); console.error(i.error || r.error || s.error); return; }
+    state.issued = (i.data || []).map(row => normalizeInvoice({
+      id:row.id,date:row.invoice_date,client:row.client,invoiceNumber:row.invoice_number,subtotal:row.subtotal,iva:row.iva,total:row.total,paid:row.paid,paymentDate:row.payment_date,notes:row.notes,uuid:row.uuid,paymentMethod:row.payment_method,paymentForm:row.payment_form,currency:row.currency,cfdiType:row.cfdi_type
+    },'issued'));
+    state.received = (r.data || []).map(row => normalizeInvoice({
+      id:row.id,date:row.invoice_date,provider:row.provider,invoiceNumber:row.invoice_number,subtotal:row.subtotal,iva:row.iva,total:row.total,paid:row.paid,paymentDate:row.payment_date,notes:row.notes,uuid:row.uuid,paymentMethod:row.payment_method,paymentForm:row.payment_form,currency:row.currency,cfdiType:row.cfdi_type
+    },'received'));
     state.services = (s.data || []).map(row => ({
-      id:row.id, date:row.service_date, client:row.client || '', serviceNumber:row.service_number || '',
-      equipment:row.equipment || '', work:row.work_done || '', amount:num(row.amount),
-      invoiced:!!row.invoiced, invoiceNumber:row.invoice_number || ''
+      id:row.id,date:row.service_date,client:row.client || '',serviceNumber:row.service_number || '',equipment:row.equipment || '',work:row.work_done || '',amount:num(row.amount),invoiced:!!row.invoiced,invoiceNumber:row.invoice_number || ''
     }));
-
+    const p = await supabaseClient.from(TABLES.payments).select('*').order('payment_date',{ascending:false});
+    if(p.error){
+      console.warn('Tabla de complementos no disponible todavía. Ejecuta el SQL de actualización V2.', p.error);
+      state.payments = state.payments || [];
+    }else{
+      state.payments = (p.data || []).map(row => normalizePayment({
+        id:row.id,date:row.payment_date,type:row.payment_type,paymentUuid:row.payment_uuid,payer:row.payer,receiver:row.receiver,amount:row.amount,iva:row.iva,currency:row.currency,paymentForm:row.payment_form,fileName:row.file_name,notes:row.notes,docs:row.related_docs
+      }));
+    }
     saveState();
-    return true;
-  }catch(err){
-    console.error(err);
-    if(showAlert) alert('Error general al cargar Supabase.');
-    return false;
-  }
+  }catch(err){ console.error(err); alert('Error general al cargar Supabase.'); }
 }
-
-
-function userIsEditing(){
-  const el = document.activeElement;
-  if(!el) return false;
-  const tag = String(el.tagName || '').toLowerCase();
-  return tag === 'input' || tag === 'textarea' || tag === 'select';
-}
-
-async function autoRefresh(){
-  if(!supabaseClient || document.hidden || userIsEditing()) return;
-  const ok = await loadRemote(false);
-  if(ok){
-    lastAutoSyncAt = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    render();
-  }
-}
-
-function startAutoSync(){
-  if(autoSyncHandle) clearInterval(autoSyncHandle);
-  autoSyncHandle = setInterval(autoRefresh, AUTO_SYNC_MS);
-}
-
-window.addEventListener('focus', () => autoRefresh());
-document.addEventListener('visibilitychange', () => {
-  if(!document.hidden) autoRefresh();
-});
-
 async function insertRemote(type,item){
   if(!supabaseClient) return null;
   let payload = {};
-  if(type === 'issued'){
-    payload = {
-      invoice_date:item.date, client:item.client, invoice_number:item.invoiceNumber,
-      subtotal:num(item.subtotal), iva:num(item.iva), total:num(item.total),
-      paid:!!item.paid, payment_date:item.paymentDate || null, notes:item.notes || null
-    };
-  }
-  if(type === 'received'){
-    payload = {
-      invoice_date:item.date, provider:item.provider, invoice_number:item.invoiceNumber,
-      subtotal:num(item.subtotal), iva:num(item.iva), total:num(item.total),
-      paid:!!item.paid, payment_date:item.paymentDate || null, notes:item.notes || null
-    };
-  }
-  if(type === 'services'){
-    payload = {
-      service_date:item.date, client:item.client, service_number:item.serviceNumber,
-      equipment:item.equipment, work_done:item.work, amount:num(item.amount),
-      invoiced:!!item.invoiced, invoice_number:item.invoiceNumber || null
-    };
-  }
+  if(type === 'issued') payload = {invoice_date:item.date,client:item.client,invoice_number:item.invoiceNumber,subtotal:num(item.subtotal),iva:num(item.iva),total:num(item.total),paid:!!item.paid,payment_date:item.paymentDate || null,notes:item.notes || null,uuid:item.uuid || null,payment_method:item.paymentMethod || 'PUE',payment_form:item.paymentForm || null,currency:item.currency || 'MXN',cfdi_type:item.cfdiType || 'I'};
+  if(type === 'received') payload = {invoice_date:item.date,provider:item.provider,invoice_number:item.invoiceNumber,subtotal:num(item.subtotal),iva:num(item.iva),total:num(item.total),paid:!!item.paid,payment_date:item.paymentDate || null,notes:item.notes || null,uuid:item.uuid || null,payment_method:item.paymentMethod || 'PUE',payment_form:item.paymentForm || null,currency:item.currency || 'MXN',cfdi_type:item.cfdiType || 'I'};
+  if(type === 'services') payload = {service_date:item.date,client:item.client,service_number:item.serviceNumber,equipment:item.equipment,work_done:item.work,amount:num(item.amount),invoiced:!!item.invoiced,invoice_number:item.invoiceNumber || null};
+  if(type === 'payments') payload = {payment_date:item.date,payment_type:item.type,payment_uuid:item.paymentUuid || null,payer:item.payer || null,receiver:item.receiver || null,amount:num(item.amount),iva:num(item.iva),currency:item.currency || 'MXN',payment_form:item.paymentForm || null,file_name:item.fileName || null,notes:item.notes || null,related_docs:item.docs || []};
   const {data,error} = await supabaseClient.from(TABLES[type]).insert(payload).select().single();
   if(error) throw error;
   return data;
 }
-
 async function updateRemote(type,id,changes){
   if(!supabaseClient) return;
   let payload = {};
@@ -370,700 +407,285 @@ async function updateRemote(type,id,changes){
   const {error} = await supabaseClient.from(TABLES[type]).update(payload).eq('id', id);
   if(error) throw error;
 }
-
 async function deleteRemote(type,id){
   if(!supabaseClient) return;
   const {error} = await supabaseClient.from(TABLES[type]).delete().eq('id', id);
   if(error) throw error;
 }
 
-
-function findFirstByLocalName(root, localName){
-  return Array.from(root.getElementsByTagName('*')).find(el => el.localName === localName) || null;
-}
-
-function findChildrenByLocalName(el, localName){
-  if(!el) return [];
-  return Array.from(el.children || []).filter(child => child.localName === localName);
-}
-
-function attr(el, name){
-  if(!el) return '';
-  return el.getAttribute(name) || el.getAttribute(name.toLowerCase()) || el.getAttribute(name.toUpperCase()) || '';
-}
-
-function parseCfdiXml(xmlText){
-  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+function findFirstByLocalName(root, localName){ return Array.from(root.getElementsByTagName('*')).find(el => el.localName === localName) || null; }
+function findChildrenByLocalName(el, localName){ if(!el) return []; return Array.from(el.children || []).filter(child => child.localName === localName); }
+function allByLocalName(root, localName){ return Array.from(root.getElementsByTagName('*')).filter(el => el.localName === localName); }
+function attr(el,name){ if(!el) return ''; return el.getAttribute(name) || el.getAttribute(name.toLowerCase()) || el.getAttribute(name.toUpperCase()) || ''; }
+function parseXmlDoc(xmlText){
+  const doc = new DOMParser().parseFromString(xmlText,'application/xml');
   const parserError = doc.getElementsByTagName('parsererror')[0];
-  if(parserError){
-    throw new Error('El archivo no parece ser un XML válido.');
-  }
-
-  const comprobante = doc.documentElement && doc.documentElement.localName === 'Comprobante'
-    ? doc.documentElement
-    : findFirstByLocalName(doc, 'Comprobante');
-
-  if(!comprobante){
-    throw new Error('No encontré el nodo Comprobante del CFDI.');
-  }
-
-  const emisor = findFirstByLocalName(doc, 'Emisor');
-  const receptor = findFirstByLocalName(doc, 'Receptor');
-  const timbre = findFirstByLocalName(doc, 'TimbreFiscalDigital');
-
-  const serie = attr(comprobante, 'Serie');
-  const folio = attr(comprobante, 'Folio');
-  const uuidFiscal = attr(timbre, 'UUID');
-  const invoiceNumber = [serie, folio].filter(Boolean).join('-') || folio || serie || uuidFiscal || '';
-
-  const subtotal = num(attr(comprobante, 'SubTotal'));
-  const total = num(attr(comprobante, 'Total'));
-
-  let iva = 0;
-  const comprobanteImpuestos = findChildrenByLocalName(comprobante, 'Impuestos')[0];
-  const totalTrasladados = num(attr(comprobanteImpuestos, 'TotalImpuestosTrasladados'));
-  if(totalTrasladados){
-    iva = totalTrasladados;
-  }else{
-    const traslados = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'Traslado');
-    iva = traslados
-      .filter(el => attr(el, 'Impuesto') === '002')
-      .reduce((acc, el) => acc + num(attr(el, 'Importe')), 0);
-  }
-  if(!iva && total && subtotal && total >= subtotal){
-    iva = +(total - subtotal).toFixed(2);
-  }
-
-  return {
-    date: String(attr(comprobante, 'Fecha') || '').slice(0,10) || hoy(),
-    invoiceNumber,
-    subtotal,
-    iva:+iva.toFixed(2),
-    total,
-    uuid: uuidFiscal,
-    emisorName: attr(emisor, 'Nombre') || attr(emisor, 'Rfc') || '',
-    emisorRfc: attr(emisor, 'Rfc') || '',
-    receptorName: attr(receptor, 'Nombre') || attr(receptor, 'Rfc') || '',
-    receptorRfc: attr(receptor, 'Rfc') || ''
-  };
+  if(parserError) throw new Error('El archivo no parece ser un XML válido.');
+  return doc;
 }
-
-function xmlNotes(data, fileName){
+function parseCfdiXml(xmlText){
+  const doc = parseXmlDoc(xmlText);
+  const comprobante = doc.documentElement && doc.documentElement.localName === 'Comprobante' ? doc.documentElement : findFirstByLocalName(doc,'Comprobante');
+  if(!comprobante) throw new Error('No encontré el nodo Comprobante del CFDI.');
+  const emisor = findFirstByLocalName(doc,'Emisor');
+  const receptor = findFirstByLocalName(doc,'Receptor');
+  const timbre = findFirstByLocalName(doc,'TimbreFiscalDigital');
+  const serie = attr(comprobante,'Serie');
+  const folio = attr(comprobante,'Folio');
+  const uuidFiscal = attr(timbre,'UUID');
+  const invoiceNumber = [serie,folio].filter(Boolean).join('-') || folio || serie || uuidFiscal || '';
+  const subtotal = num(attr(comprobante,'SubTotal'));
+  const total = num(attr(comprobante,'Total'));
+  let iva = 0;
+  const comprobanteImpuestos = findChildrenByLocalName(comprobante,'Impuestos')[0];
+  const totalTrasladados = num(attr(comprobanteImpuestos,'TotalImpuestosTrasladados'));
+  if(totalTrasladados) iva = totalTrasladados;
+  else{
+    const traslados = allByLocalName(doc,'Traslado');
+    iva = traslados.filter(el => attr(el,'Impuesto') === '002').reduce((acc,el)=>acc+num(attr(el,'Importe')),0);
+  }
+  if(!iva && total && subtotal && total >= subtotal) iva = +(total - subtotal).toFixed(2);
+  const metodo = attr(comprobante,'MetodoPago') || 'PUE';
+  const forma = attr(comprobante,'FormaPago') || '';
+  return {date:String(attr(comprobante,'Fecha')||'').slice(0,10) || hoy(), invoiceNumber, subtotal, iva:+iva.toFixed(2), total, uuid:uuidFiscal ? uuidFiscal.toUpperCase() : '', emisorName:attr(emisor,'Nombre') || attr(emisor,'Rfc') || '', emisorRfc:attr(emisor,'Rfc') || '', receptorName:attr(receptor,'Nombre') || attr(receptor,'Rfc') || '', receptorRfc:attr(receptor,'Rfc') || '', paymentMethod:metodo, paymentForm:forma, currency:attr(comprobante,'Moneda') || 'MXN', cfdiType:attr(comprobante,'TipoDeComprobante') || ''};
+}
+function parsePaymentComplementXml(xmlText,fileName,typeHint){
+  const doc = parseXmlDoc(xmlText);
+  const comprobante = doc.documentElement && doc.documentElement.localName === 'Comprobante' ? doc.documentElement : findFirstByLocalName(doc,'Comprobante');
+  if(!comprobante) throw new Error('No encontré el nodo Comprobante del CFDI.');
+  const tipo = attr(comprobante,'TipoDeComprobante');
+  if(tipo && tipo !== 'P') throw new Error('Este XML no parece ser un Complemento de Pago: TipoDeComprobante=' + tipo);
+  const emisor = findFirstByLocalName(doc,'Emisor');
+  const receptor = findFirstByLocalName(doc,'Receptor');
+  const timbre = findFirstByLocalName(doc,'TimbreFiscalDigital');
+  const pagoNodes = allByLocalName(doc,'Pago');
+  if(!pagoNodes.length) throw new Error('No encontré nodos Pago dentro del complemento.');
+  const payments = pagoNodes.map(pago => {
+    const doctos = findChildrenByLocalName(pago,'DoctoRelacionado');
+    let docs = doctos.map(d => {
+      const trasladosDR = allByLocalName(d,'TrasladoDR');
+      let ivaPaid = 0, taxBase = 0, taxRate = 0;
+      trasladosDR.filter(t => attr(t,'ImpuestoDR') === '002').forEach(t => { ivaPaid += num(attr(t,'ImporteDR')); taxBase += num(attr(t,'BaseDR')); taxRate = num(attr(t,'TasaOCuotaDR')) || taxRate; });
+      return {invoiceUuid:(attr(d,'IdDocumento') || '').toUpperCase(), serie:attr(d,'Serie'), folio:attr(d,'Folio'), invoiceNumber:[attr(d,'Serie'),attr(d,'Folio')].filter(Boolean).join('-'), partiality:attr(d,'NumParcialidad'), previousBalance:num(attr(d,'ImpSaldoAnt')), amountPaid:num(attr(d,'ImpPagado')), remainingBalance:num(attr(d,'ImpSaldoInsoluto')), taxBase:+taxBase.toFixed(2), ivaPaid:+ivaPaid.toFixed(2), taxRate};
+    });
+    let totalIva = docs.reduce((a,d)=>a+num(d.ivaPaid),0);
+    if(!totalIva){
+      const trasladosP = allByLocalName(pago,'TrasladoP');
+      totalIva = trasladosP.filter(t => attr(t,'ImpuestoP') === '002').reduce((a,t)=>a+num(attr(t,'ImporteP')),0);
+    }
+    const payment = normalizePayment({date:String(attr(pago,'FechaPago') || attr(comprobante,'Fecha') || '').slice(0,10) || hoy(), type:typeHint || 'issued', paymentUuid:(attr(timbre,'UUID') || '').toUpperCase(), payer:attr(receptor,'Nombre') || attr(receptor,'Rfc') || '', receiver:attr(emisor,'Nombre') || attr(emisor,'Rfc') || '', amount:num(attr(pago,'Monto')), iva:+totalIva.toFixed(2), currency:attr(pago,'MonedaP') || 'MXN', paymentForm:attr(pago,'FormaDePagoP') || '', fileName:fileName || '', notes:'XML complemento de pago', docs});
+    payment.type = typeHint && typeHint !== 'auto' ? typeHint : inferPaymentType(payment);
+    return payment;
+  });
+  return payments;
+}
+function xmlNotes(data,fileName){
   const pieces = [];
   if(data.uuid) pieces.push('UUID: ' + data.uuid);
+  if(data.paymentMethod) pieces.push('Método: ' + data.paymentMethod);
+  if(data.paymentForm) pieces.push('Forma: ' + data.paymentForm);
   if(data.emisorRfc) pieces.push('Emisor RFC: ' + data.emisorRfc);
   if(data.receptorRfc) pieces.push('Receptor RFC: ' + data.receptorRfc);
   if(fileName) pieces.push('Archivo XML: ' + fileName);
   return pieces.join(' | ');
 }
-
-function fillInvoiceFromXml(type, data, fileName){
-  const form = document.getElementById(type + 'Form');
-  if(!form) return;
-
+function fillInvoiceFromXml(type,data,fileName){
+  const form = document.getElementById(type + 'Form'); if(!form) return;
   form.elements.date.value = data.date || hoy();
   form.elements.invoiceNumber.value = data.invoiceNumber || '';
   form.elements.subtotal.value = data.subtotal || 0;
   form.elements.iva.value = data.iva || 0;
-  form.elements.total.value = data.total || calcTotal(data.subtotal, data.iva);
-
-  if(type === 'issued'){
-    form.elements.client.value = data.receptorName || '';
-  }else{
-    form.elements.provider.value = data.emisorName || '';
-  }
-
-  const notesInput = document.getElementById(type + 'XmlNotes');
-  if(notesInput) notesInput.value = xmlNotes(data, fileName);
-
+  form.elements.total.value = data.total || calcTotal(data.subtotal,data.iva);
+  form.elements.uuid.value = data.uuid || '';
+  form.elements.paymentMethod.value = data.paymentMethod || 'PUE';
+  form.elements.paymentForm.value = data.paymentForm || '';
+  form.elements.currency.value = data.currency || 'MXN';
+  if(type === 'issued') form.elements.client.value = data.receptorName || '';
+  else form.elements.provider.value = data.emisorName || '';
+  if(data.paymentMethod === 'PUE') form.elements.paid.checked = true;
+  const notesInput = document.getElementById(type + 'XmlNotes'); if(notesInput) notesInput.value = xmlNotes(data,fileName);
   const preview = document.getElementById(type + 'XmlPreview');
   if(preview){
     const nombre = type === 'issued' ? data.receptorName : data.emisorName;
-    preview.innerHTML = `
-      <b>XML leído correctamente.</b><br>
-      Nombre: ${esc(nombre || 'Sin nombre')}<br>
-      Factura: ${esc(data.invoiceNumber || 'Sin folio')}<br>
-      Subtotal: ${money(data.subtotal)} · IVA: ${money(data.iva)} · Total: ${money(data.total)}<br>
-      ${data.uuid ? 'UUID: ' + esc(data.uuid) : 'UUID no encontrado'}<br><br>
-      Revisa los datos y presiona <b>Guardar</b>.
-    `;
+    preview.innerHTML = `<b>XML leído correctamente.</b><br>Nombre: ${esc(nombre || 'Sin nombre')}<br>Factura: ${esc(data.invoiceNumber || 'Sin folio')} · ${esc(data.paymentMethod || 'PUE')}<br>Subtotal: ${money(data.subtotal)} · IVA: ${money(data.iva)} · Total: ${money(data.total)}<br>${data.uuid ? 'UUID: ' + esc(data.uuid) : 'UUID no encontrado'}<br><br>Revisa los datos y presiona <b>Guardar</b>.`;
   }
 }
-
 function attachXmlImport(type){
-  const input = document.getElementById(type + 'XmlFile');
-  if(!input) return;
+  const input = document.getElementById(type + 'XmlFile'); if(!input) return;
   input.addEventListener('change', async e => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    try{
-      const xmlText = await file.text();
-      const data = parseCfdiXml(xmlText);
-      fillInvoiceFromXml(type, data, file.name);
-    }catch(err){
-      console.error(err);
-      alert(err.message || 'No pude leer el XML.');
-    }
+    const file = e.target.files && e.target.files[0]; if(!file) return;
+    try{ const xmlText = await file.text(); const data = parseCfdiXml(xmlText); fillInvoiceFromXml(type,data,file.name); }
+    catch(err){ console.error(err); alert(err.message || 'No pude leer el XML.'); }
   });
+}
+async function importPaymentXmlFiles(){
+  const input = document.getElementById('paymentXmlFiles');
+  const select = document.getElementById('paymentImportType');
+  const preview = document.getElementById('paymentXmlPreview');
+  if(!input || !input.files || !input.files.length) return;
+  const typeHint = select ? select.value : 'issued';
+  let imported = [], errors = [];
+  for(const file of Array.from(input.files)){
+    try{
+      const txt = await file.text();
+      const payments = parsePaymentComplementXml(txt,file.name,typeHint);
+      for(const p of payments){ await addItem('payments',p,false); imported.push(p); }
+    }catch(err){ console.error(err); errors.push(file.name + ': ' + (err.message || 'No pude leer el XML')); }
+  }
+  saveState();
+  if(preview){
+    preview.innerHTML = `${imported.length ? '<b>Complementos importados:</b><br>' + imported.map(p => `${esc(p.fileName)} · ${p.type === 'issued' ? 'Cobro cliente' : 'Pago proveedor'} · ${esc(p.paymentUuid || 'sin UUID')} · ${money(p.amount)} · IVA ${money(p.iva)}`).join('<br>') : 'No se importó ningún complemento.'}${errors.length ? '<br><br><b>Errores:</b><br>' + errors.map(esc).join('<br>') : ''}`;
+  }
+  input.value = '';
+  await loadRemote();
+  render();
 }
 
 function render(){
-  renderTabs();
-  updateConnectionStatus();
+  renderTabs(); updateConnectionStatus();
   const main = document.getElementById('main');
   if(state.activeTab === 'dashboard') main.innerHTML = viewDashboard();
   if(state.activeTab === 'issued') main.innerHTML = viewIssued();
   if(state.activeTab === 'received') main.innerHTML = viewReceived();
+  if(state.activeTab === 'payments') main.innerHTML = viewPayments();
   if(state.activeTab === 'services') main.innerHTML = viewServices();
   if(state.activeTab === 'settings') main.innerHTML = viewSettings();
   attachEvents();
 }
-
 function renderTabs(){
   const el = document.getElementById('tabs');
   el.innerHTML = tabs.map(([id,label]) => `<button class="tab-btn ${state.activeTab===id?'active':''}" data-tab="${id}">${label}</button>`).join('');
-  el.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.onclick = () => {
-      state.activeTab = btn.dataset.tab;
-      saveState();
-      render();
-    };
-  });
+  el.querySelectorAll('[data-tab]').forEach(btn => { btn.onclick = () => { state.activeTab = btn.dataset.tab; saveState(); render(); }; });
 }
-
-function monthBox(){
-  return `<div class="month-box">
-    <label>Mes</label>
-    <input type="month" id="monthInput" value="${esc(state.month)}">
-    <button class="small-btn" id="reloadBtn" type="button">Actualizar ahora</button>
-    <div style="margin-top:8px;color:#64748b;font-size:12px;line-height:1.35">
-      ${lastAutoSyncAt ? 'Última autoactualización: ' + esc(lastAutoSyncAt) : 'Autoactualiza cada 5 segundos si no estás escribiendo.'}
-    </div>
-  </div>`;
-}
-
+function monthBox(){ return `<div class="month-box"><label>Mes</label><input type="month" id="monthInput" value="${esc(state.month)}"><button class="small-btn" id="reloadBtn" type="button">Actualizar</button></div>`; }
 function viewDashboard(){
-  const m = getMonthly();
-  return `
-    <div class="section-title">
-      <div>
-        <h2>Dashboard</h2>
-        <p>Resumen administrativo del mes. Es una estimación interna; el cálculo fiscal final se valida con contador/SAT.</p>
-      </div>
-      ${monthBox()}
-    </div>
-
-    <div class="metrics">
-      ${metric('Facturas emitidas', money(m.issuedTotal), `${m.issued.length} facturas registradas`, 'good')}
-      ${metric('Facturas recibidas', money(m.receivedTotal), `${m.received.length} facturas registradas`, 'blue')}
-      ${metric('Por cobrar', money(m.receivable), 'Facturas emitidas pendientes de pago', m.receivable>0?'warn':'good')}
-      ${metric('Por pagar', money(m.payable), 'Facturas recibidas pendientes de pago', m.payable>0?'warn':'good')}
-
-      ${metric('IVA cobrado', money(m.issuedIva), 'IVA en facturas emitidas', 'good')}
-      ${metric('IVA pagado', money(m.receivedIva), 'IVA en facturas recibidas', 'blue')}
-      ${metric('IVA estimado', money(m.ivaToPay), 'IVA emitido - IVA recibido', m.ivaToPay>0?'warn':'good')}
-      ${metric('ISR estimado', money(m.estimatedIsr), `${state.isrRate}% sobre utilidad de flujo`, m.estimatedIsr>0?'warn':'good')}
-
-      ${metric('Cobrado', money(m.collected), 'Facturas emitidas pagadas', 'good')}
-      ${metric('Gastos pagados', money(m.paidExpenses), 'Facturas recibidas pagadas', 'blue')}
-      ${metric('Utilidad estimada', money(m.estimatedProfit), 'Cobrado - gastos pagados', m.estimatedProfit>=0?'good':'bad')}
-      ${metric('Servicios por facturar', money(m.servicePendingAmount), `${m.pendingServices.length} hojas pendientes`, m.pendingServices.length?'warn':'good')}
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Lectura rápida</h3>
-        <p class="sub">Lo que más importa para no perder control.</p>
-        <div class="note-box">
-          <b>Dinero pendiente de entrar:</b> ${money(m.receivable)}<br>
-          <b>Dinero pendiente de salir:</b> ${money(m.payable)}<br>
-          <b>IVA estimado a pagar:</b> ${money(m.ivaToPay)}<br>
-          <b>ISR estimado:</b> ${money(m.estimatedIsr)}<br><br>
-          <b>Después de IVA e ISR estimados:</b> ${money(m.estimatedProfit - Math.max(m.ivaToPay,0) - m.estimatedIsr)}
-        </div>
-      </div>
-      <div class="card">
-        <h3>Pendientes</h3>
-        <p class="sub">Facturas y servicios que requieren atención.</p>
-        <div class="note-box">
-          <b>Facturas emitidas sin pago:</b> ${m.issued.filter(x=>!x.paid).length}<br>
-          <b>Facturas recibidas sin pagar:</b> ${m.received.filter(x=>!x.paid).length}<br>
-          <b>Servicios sin facturar:</b> ${m.pendingServices.length}<br><br>
-          ${m.pendingServices.length ? 'Revisa la pestaña <b>Servicios</b> para facturar lo pendiente.' : 'No hay servicios pendientes de facturar en este mes.'}
-        </div>
-      </div>
-    </div>
-
-    <div class="table-title">Últimas facturas emitidas del mes</div>
-    ${invoiceTable('issued', m.issued.slice(0,5), true)}
-
-    <div class="table-title">Últimas facturas recibidas del mes</div>
-    ${invoiceTable('received', m.received.slice(0,5), true)}
-  `;
+  const m = getMonthly(); const t = m.tax;
+  return `<div class="section-title"><div><h2>Dashboard fiscal y administrativo</h2><p>Resumen del mes. Para PPD se toma el IVA de los complementos de pago; para PUE se toma como cobrado/pagado al momento de la factura si está marcada pagada o viene como PUE desde el XML.</p></div>${monthBox()}</div>
+  <div class="metrics">
+    ${metric('IVA cobrado efectivo', money(t.ivaCollected), `PUE: ${money(t.issuedPueIva)} · PPD: ${money(t.issuedPpdIva)}`, 'good')}
+    ${metric('IVA acreditable efectivo', money(t.ivaCreditable), `PUE: ${money(t.receivedPueIva)} · PPD: ${money(t.receivedPpdIva)}`, 'blue')}
+    ${metric('IVA estimado a pagar', money(t.ivaToPay), 'IVA cobrado - IVA acreditable', t.ivaToPay>0?'warn':'good')}
+    ${metric('ISR estimado', money(t.estimatedIsr), `${state.isrRate}% sobre utilidad base flujo`, t.estimatedIsr>0?'warn':'good')}
+    ${metric('Ingresos base flujo', money(t.cashIncomeBase), 'Subtotal PUE cobrado + base PPD cobrada', 'good')}
+    ${metric('Gastos base flujo', money(t.cashExpenseBase), 'Subtotal PUE pagado + base PPD pagada', 'blue')}
+    ${metric('Utilidad base flujo', money(t.profitBase), 'Ingresos base - gastos base', t.profitBase>=0?'good':'bad')}
+    ${metric('Resultado después impuestos', money(t.profitBase - Math.max(t.ivaToPay,0) - t.estimatedIsr), 'Estimación interna', 'purple')}
+    ${metric('Por cobrar total', money(m.receivable), `${m.ppdIssuedPending.length} PPD pendientes`, m.receivable>0?'warn':'good')}
+    ${metric('Por pagar total', money(m.payable), `${m.ppdReceivedPending.length} PPD pendientes`, m.payable>0?'warn':'good')}
+    ${metric('Complementos del mes', String(m.payments.length), `${m.payments.filter(x=>x.type==='issued').length} cobros · ${m.payments.filter(x=>x.type==='received').length} pagos`, 'purple')}
+    ${metric('Servicios por facturar', money(m.servicePendingAmount), `${m.pendingServices.length} hojas pendientes`, m.pendingServices.length?'warn':'good')}
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3>Lectura fiscal rápida</h3><p class="sub">Lo importante para facturas PPD.</p><div class="note-box"><b>PPD no debe mover IVA por fecha de factura.</b> En esta versión el IVA PPD se mueve al mes del complemento de pago.<br><br><b>Cobros PPD del mes:</b> ${money(t.issuedPpdTotal)} · IVA ${money(t.issuedPpdIva)}<br><b>Pagos PPD del mes:</b> ${money(t.receivedPpdTotal)} · IVA ${money(t.receivedPpdIva)}<br><b>IVA neto estimado:</b> ${money(t.ivaToPay)}</div></div>
+    <div class="card"><h3>Pendientes de control</h3><p class="sub">Para no olvidar complementos.</p><div class="note-box"><b>Facturas PPD emitidas pendientes:</b> ${m.ppdIssuedPending.length}<br><b>Facturas PPD recibidas pendientes:</b> ${m.ppdReceivedPending.length}<br><b>Facturas emitidas del mes:</b> ${m.issued.length} · ${money(m.issuedTotal)}<br><b>Facturas recibidas del mes:</b> ${m.received.length} · ${money(m.receivedTotal)}<br><br>Cuando cargues el XML de pago, el sistema lo relaciona por UUID de la factura.</div></div>
+  </div>
+  <div class="table-title">Facturas PPD emitidas pendientes</div>${invoiceTable('issued', m.ppdIssuedPending.slice(0,8), true)}
+  <div class="table-title">Complementos del mes</div>${paymentsTable(m.payments.slice(0,8), true)}`;
 }
-
+function invoiceForm(type){
+  const isIssued = type === 'issued';
+  return `<form class="form" id="${type}Form">
+    <input type="hidden" name="xmlNotes" id="${type}XmlNotes">
+    <div class="form-row"><div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div><div class="field"><label>${isIssued?'Cliente':'Proveedor'}</label><input name="${isIssued?'client':'provider'}" placeholder="${isIssued?'Ej. Laboratorio / clínica':'Ej. Proveedor / refacciones'}"></div></div>
+    <div class="form-row"><div class="field"><label>Número de factura</label><input name="invoiceNumber" placeholder="Ej. A-001"></div><div class="field"><label>UUID fiscal</label><input name="uuid" placeholder="UUID del XML"></div></div>
+    <div class="form-row"><div class="field"><label>Método de pago</label><select name="paymentMethod"><option value="PUE">PUE - Pago en una sola exhibición</option><option value="PPD">PPD - Parcialidades o diferido</option></select></div><div class="field"><label>Forma de pago</label><input name="paymentForm" placeholder="Ej. 03 Transferencia / 99 Por definir"></div></div>
+    <div class="form-row"><div class="field"><label>Moneda</label><input name="currency" value="MXN"></div><div class="field"><label>Fecha de pago manual</label><input type="date" name="paymentDate"></div></div>
+    <div class="form-row"><div class="field"><label>Subtotal</label><input type="number" step="0.01" name="subtotal" id="${type}Subtotal"></div><div class="field"><label>IVA</label><input type="number" step="0.01" name="iva" id="${type}Iva"></div></div>
+    <div class="field"><label>Total</label><input type="number" step="0.01" name="total" id="${type}Total"></div>
+    <label class="check"><input type="checkbox" name="paid"> Pagada / cobrada manualmente</label>
+    <button class="save-btn" type="submit">Guardar factura ${isIssued?'emitida':'recibida'}</button>
+  </form>`;
+}
 function viewIssued(){
   const rows = state.issued.filter(monthFilter);
-  return `
-    <div class="section-title">
-      <div>
-        <h2>Facturas emitidas</h2>
-        <p>Lo que SotoMed factura a clientes.</p>
-      </div>
-      ${monthBox()}
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Nueva factura emitida</h3>
-        <p class="sub">Puedes capturar a mano o adjuntar el XML CFDI para llenar los datos automáticamente.</p>
-        <div class="xml-box">
-          <b>Importar XML CFDI</b><br>
-          Adjunta el XML y se llenan cliente, número de factura, fecha, subtotal, IVA y total.
-          <input type="file" id="issuedXmlFile" accept=".xml,text/xml,application/xml">
-          <div id="issuedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div>
-        </div>
-        <form class="form" id="issuedForm">
-          <input type="hidden" name="xmlNotes" id="issuedXmlNotes">
-          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
-          <div class="field"><label>Cliente</label><input name="client" placeholder="Ej. Laboratorio / clínica / distribuidor"></div>
-          <div class="field"><label>Número de factura</label><input name="invoiceNumber" placeholder="Ej. A-001"></div>
-          <div class="field"><label>Subtotal</label><input type="number" step="0.01" name="subtotal" id="issuedSubtotal"></div>
-          <div class="field"><label>IVA</label><input type="number" step="0.01" name="iva" id="issuedIva"></div>
-          <div class="field"><label>Total</label><input type="number" step="0.01" name="total" id="issuedTotal"></div>
-          <label class="check"><input type="checkbox" name="paid"> Pagada</label>
-          <div class="field"><label>Fecha de pago</label><input type="date" name="paymentDate"></div>
-          <button class="save-btn" type="submit">Guardar factura emitida</button>
-        </form>
-      </div>
-      <div class="card">
-        <h3>Resumen de emitidas</h3>
-        <p class="sub">Corte del mes seleccionado.</p>
-        <div class="metrics" style="grid-template-columns:1fr 1fr">
-          ${metric('Total', money(sum(rows,'total')), `${rows.length} facturas`, 'good')}
-          ${metric('IVA', money(sum(rows,'iva')), 'IVA trasladado', 'warn')}
-          ${metric('Cobrado', money(sum(rows.filter(x=>x.paid),'total')), 'Pagadas', 'good')}
-          ${metric('Pendiente', money(sum(rows.filter(x=>!x.paid),'total')), 'Por cobrar', rows.some(x=>!x.paid)?'warn':'good')}
-        </div>
-      </div>
-    </div>
-
-    <div class="table-title">Listado de facturas emitidas</div>
-    ${invoiceTable('issued', rows)}
-  `;
+  return `<div class="section-title"><div><h2>Facturas emitidas</h2><p>Lo que SotoMed factura a clientes. Si el XML viene como PPD, no se considera IVA cobrado hasta que cargues el complemento de pago.</p></div>${monthBox()}</div>
+  <div class="grid-2"><div class="card"><h3>Nueva factura emitida</h3><p class="sub">Captura a mano o adjunta XML CFDI.</p><div class="xml-box"><b>Importar XML CFDI</b><br>Llena cliente, UUID, método PUE/PPD, subtotal, IVA y total.<input type="file" id="issuedXmlFile" accept=".xml,text/xml,application/xml"><div id="issuedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div></div>${invoiceForm('issued')}</div>
+  <div class="card"><h3>Resumen de emitidas</h3><p class="sub">Corte del mes seleccionado.</p><div class="metrics" style="grid-template-columns:1fr 1fr">${metric('Total facturado', money(sum(rows,'total')), `${rows.length} facturas`, 'good')}${metric('IVA facturado', money(sum(rows,'iva')), 'No siempre es IVA cobrado si es PPD', 'warn')}${metric('PPD', String(rows.filter(x=>x.paymentMethod==='PPD').length), 'Requieren complemento', 'purple')}${metric('Pendiente por cobrar', money(rows.reduce((a,x)=>a+(num(x.total)-invoicePaymentSummary('issued',x).paidTotal),0)), 'Según pagos registrados', 'warn')}</div><div class="alert-box"><b>Regla de control:</b> si es PPD, carga su complemento en la pestaña Complementos para que el IVA caiga en el mes correcto.</div></div></div>
+  <div class="table-title">Listado de facturas emitidas</div>${invoiceTable('issued',rows)}`;
 }
-
 function viewReceived(){
   const rows = state.received.filter(monthFilter);
-  return `
-    <div class="section-title">
-      <div>
-        <h2>Facturas recibidas</h2>
-        <p>Lo que SotoMed recibe de proveedores o gastos.</p>
-      </div>
-      ${monthBox()}
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Nueva factura recibida</h3>
-        <p class="sub">Puedes capturar a mano o adjuntar el XML CFDI para llenar los datos automáticamente.</p>
-        <div class="xml-box">
-          <b>Importar XML CFDI</b><br>
-          Adjunta el XML y se llenan proveedor, número de factura, fecha, subtotal, IVA y total.
-          <input type="file" id="receivedXmlFile" accept=".xml,text/xml,application/xml">
-          <div id="receivedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div>
-        </div>
-        <form class="form" id="receivedForm">
-          <input type="hidden" name="xmlNotes" id="receivedXmlNotes">
-          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
-          <div class="field"><label>Proveedor</label><input name="provider" placeholder="Ej. Proveedor / refacciones / gasolina"></div>
-          <div class="field"><label>Número de factura</label><input name="invoiceNumber" placeholder="Ej. F-1001"></div>
-          <div class="field"><label>Subtotal</label><input type="number" step="0.01" name="subtotal" id="receivedSubtotal"></div>
-          <div class="field"><label>IVA</label><input type="number" step="0.01" name="iva" id="receivedIva"></div>
-          <div class="field"><label>Total</label><input type="number" step="0.01" name="total" id="receivedTotal"></div>
-          <label class="check"><input type="checkbox" name="paid"> Pagada</label>
-          <div class="field"><label>Fecha de pago</label><input type="date" name="paymentDate"></div>
-          <button class="save-btn" type="submit">Guardar factura recibida</button>
-        </form>
-      </div>
-      <div class="card">
-        <h3>Resumen de recibidas</h3>
-        <p class="sub">Corte del mes seleccionado.</p>
-        <div class="metrics" style="grid-template-columns:1fr 1fr">
-          ${metric('Total', money(sum(rows,'total')), `${rows.length} facturas`, 'blue')}
-          ${metric('IVA', money(sum(rows,'iva')), 'IVA acreditable', 'good')}
-          ${metric('Pagado', money(sum(rows.filter(x=>x.paid),'total')), 'Pagadas', 'blue')}
-          ${metric('Pendiente', money(sum(rows.filter(x=>!x.paid),'total')), 'Por pagar', rows.some(x=>!x.paid)?'warn':'good')}
-        </div>
-      </div>
-    </div>
-
-    <div class="table-title">Listado de facturas recibidas</div>
-    ${invoiceTable('received', rows)}
-  `;
+  return `<div class="section-title"><div><h2>Facturas recibidas</h2><p>Gastos/proveedores. Si son PPD, el IVA acreditable se reconoce con el complemento de pago recibido del proveedor.</p></div>${monthBox()}</div>
+  <div class="grid-2"><div class="card"><h3>Nueva factura recibida</h3><p class="sub">Captura a mano o adjunta XML CFDI.</p><div class="xml-box"><b>Importar XML CFDI</b><br>Llena proveedor, UUID, método PUE/PPD, subtotal, IVA y total.<input type="file" id="receivedXmlFile" accept=".xml,text/xml,application/xml"><div id="receivedXmlPreview" style="margin-top:10px">Todavía no has cargado XML.</div></div>${invoiceForm('received')}</div>
+  <div class="card"><h3>Resumen de recibidas</h3><p class="sub">Corte del mes seleccionado.</p><div class="metrics" style="grid-template-columns:1fr 1fr">${metric('Total recibido', money(sum(rows,'total')), `${rows.length} facturas`, 'blue')}${metric('IVA facturado', money(sum(rows,'iva')), 'Acreditable si cumple requisitos y está pagado', 'good')}${metric('PPD', String(rows.filter(x=>x.paymentMethod==='PPD').length), 'Requieren complemento', 'purple')}${metric('Pendiente por pagar', money(rows.reduce((a,x)=>a+(num(x.total)-invoicePaymentSummary('received',x).paidTotal),0)), 'Según pagos registrados', 'warn')}</div></div></div>
+  <div class="table-title">Listado de facturas recibidas</div>${invoiceTable('received',rows)}`;
 }
-
+function viewPayments(){
+  const rows = state.payments.filter(monthFilter);
+  const issuedRows = rows.filter(x=>x.type==='issued'), receivedRows = rows.filter(x=>x.type==='received');
+  return `<div class="section-title"><div><h2>Complementos de pago</h2><p>Aquí cargas los XML de Complemento de Recepción de Pagos. El sistema toma FechaPago, Monto, UUID del pago, documentos relacionados, ImpPagado, saldo insoluto e IVA trasladado del pago.</p></div>${monthBox()}</div>
+  <div class="grid-2"><div class="card"><h3>Subir XML de complemento</h3><p class="sub">Puedes subir uno o varios XML. Si el UUID relacionado existe en tus facturas, se relaciona automáticamente.</p><div class="xml-box"><b>Importar complemento de pago XML</b><br><select id="paymentImportType"><option value="auto">Automático por UUID</option><option value="issued" selected>Cobro de cliente - factura emitida</option><option value="received">Pago a proveedor - factura recibida</option></select><input type="file" id="paymentXmlFiles" accept=".xml,text/xml,application/xml" multiple><div id="paymentXmlPreview" style="margin-top:10px">Todavía no has cargado complementos.</div></div><div class="alert-box"><b>Tip:</b> Para facturas emitidas PPD, el complemento normalmente lo emites tú cuando recibes el pago. Para facturas recibidas PPD, tu proveedor te emite el complemento cuando le pagas.</div></div>
+  <div class="card"><h3>Resumen del mes</h3><p class="sub">Complementos registrados en el mes seleccionado.</p><div class="metrics" style="grid-template-columns:1fr 1fr">${metric('Cobros cliente', money(sum(issuedRows,'amount')), `${issuedRows.length} complementos`, 'good')}${metric('IVA cobrado PPD', money(sum(issuedRows,'iva')), 'Desde complementos', 'warn')}${metric('Pagos proveedor', money(sum(receivedRows,'amount')), `${receivedRows.length} complementos`, 'blue')}${metric('IVA acreditable PPD', money(sum(receivedRows,'iva')), 'Desde complementos', 'good')}</div></div></div>
+  <div class="table-title">Complementos registrados</div>${paymentsTable(rows)}`;
+}
 function viewServices(){
-  const rows = state.services.filter(monthFilter);
-  const pending = rows.filter(x=>!x.invoiced);
-  return `
-    <div class="section-title">
-      <div>
-        <h2>Hojas de servicio</h2>
-        <p>Registro simple para saber qué servicios ya se facturaron y cuáles siguen pendientes.</p>
-      </div>
-      ${monthBox()}
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Nueva hoja de servicio</h3>
-        <form class="form" id="serviceForm">
-          <div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div>
-          <div class="field"><label>Cliente</label><input name="client"></div>
-          <div class="field"><label>Folio de servicio</label><input name="serviceNumber" placeholder="Ej. HS-001"></div>
-          <div class="field"><label>Equipo</label><input name="equipment" placeholder="Ej. BC-5380 / refrigerador / centrifuga"></div>
-          <div class="field"><label>Trabajo realizado</label><textarea name="work"></textarea></div>
-          <div class="field"><label>Monto</label><input type="number" step="0.01" name="amount"></div>
-          <label class="check"><input type="checkbox" name="invoiced"> Ya facturado</label>
-          <div class="field"><label>Factura relacionada</label><input name="invoiceNumber" placeholder="Ej. A-001"></div>
-          <button class="save-btn" type="submit">Guardar hoja de servicio</button>
-        </form>
-      </div>
-      <div class="card">
-        <h3>Resumen de servicios</h3>
-        <div class="metrics" style="grid-template-columns:1fr 1fr">
-          ${metric('Servicios', String(rows.length), 'Hojas del mes', 'blue')}
-          ${metric('Por facturar', String(pending.length), 'Pendientes', pending.length?'warn':'good')}
-          ${metric('Monto total', money(sum(rows,'amount')), 'Servicios registrados', 'good')}
-          ${metric('Monto pendiente', money(sum(pending,'amount')), 'Pendiente de factura', pending.length?'warn':'good')}
-        </div>
-      </div>
-    </div>
-
-    <div class="table-title">Listado de hojas de servicio</div>
-    ${servicesTable(rows)}
-  `;
+  const rows = state.services.filter(monthFilter); const pending = rows.filter(x=>!x.invoiced);
+  return `<div class="section-title"><div><h2>Hojas de servicio</h2><p>Registro simple para saber qué servicios ya se facturaron y cuáles siguen pendientes.</p></div>${monthBox()}</div>
+  <div class="grid-2"><div class="card"><h3>Nueva hoja de servicio</h3><form class="form" id="serviceForm"><div class="field"><label>Fecha</label><input type="date" name="date" value="${hoy()}"></div><div class="field"><label>Cliente</label><input name="client"></div><div class="field"><label>Folio de servicio</label><input name="serviceNumber" placeholder="Ej. HS-001"></div><div class="field"><label>Equipo</label><input name="equipment" placeholder="Ej. BC-5380 / refrigerador / centrifuga"></div><div class="field"><label>Trabajo realizado</label><textarea name="work"></textarea></div><div class="field"><label>Monto</label><input type="number" step="0.01" name="amount"></div><label class="check"><input type="checkbox" name="invoiced"> Ya facturado</label><div class="field"><label>Factura relacionada</label><input name="invoiceNumber" placeholder="Ej. A-001"></div><button class="save-btn" type="submit">Guardar hoja de servicio</button></form></div><div class="card"><h3>Resumen de servicios</h3><div class="metrics" style="grid-template-columns:1fr 1fr">${metric('Servicios', String(rows.length), 'Hojas del mes', 'blue')}${metric('Por facturar', String(pending.length), 'Pendientes', pending.length?'warn':'good')}${metric('Monto total', money(sum(rows,'amount')), 'Servicios registrados', 'good')}${metric('Monto pendiente', money(sum(pending,'amount')), 'Pendiente de factura', pending.length?'warn':'good')}</div></div></div><div class="table-title">Listado de hojas de servicio</div>${servicesTable(rows)}`;
 }
-
 function viewSettings(){
-  return `
-    <div class="section-title">
-      <div>
-        <h2>Configuración</h2>
-        <p>Parámetros rápidos para cálculo y conexión con Supabase.</p>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Impuestos estimados</h3>
-        <p class="sub">Se usan solo para el dashboard.</p>
-        <form class="form" id="taxSettingsForm">
-          <div class="field"><label>IVA %</label><input type="number" step="0.01" name="ivaRate" value="${esc(state.ivaRate)}"></div>
-          <div class="field"><label>ISR estimado %</label><input type="number" step="0.01" name="isrRate" value="${esc(state.isrRate)}"></div>
-          <button class="save-btn" type="submit">Guardar configuración</button>
-        </form>
-        <div class="note-box">
-          El ISR es solo estimado. Lo dejé configurable porque depende de tu régimen, deducciones, retenciones y criterio contable.
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Conexión Supabase</h3>
-        <p class="sub">Para que el sistema guarde en la nube y funcione desde GitHub Pages.</p>
-        <form class="form" id="supabaseSettingsForm">
-          <div class="field"><label>Supabase URL</label><input name="supabaseUrl" value="${esc(normalizeSupabaseUrl(state.supabaseUrl))}" placeholder="https://xxxxx.supabase.co"></div>
-          <div class="field"><label>Publishable / Anon Key</label><textarea name="supabaseKey" placeholder="sb_publishable... o anon key">${esc(state.supabaseKey)}</textarea></div>
-          <button class="save-btn" type="submit">Guardar conexión</button>
-        </form>
-        <div class="actions-row">
-          <button class="ghost-btn" id="testSupabaseBtn">Probar / cargar datos</button>
-          <button class="danger-btn" id="clearLocalBtn">Borrar datos locales</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:16px">
-      <h3>SQL de Supabase</h3>
-      <p class="sub">Ejecuta este SQL en Supabase SQL Editor antes de conectar.</p>
-      <div class="actions-row">
-        <button class="ghost-btn" id="copySqlBtn">Copiar SQL</button>
-      </div>
-      <pre class="code" id="sqlBlock">${esc(SUPABASE_SQL)}</pre>
-    </div>
-  `;
+  return `<div class="section-title"><div><h2>Configuración</h2><p>Parámetros rápidos para cálculo, conexión con Supabase y SQL actualizado para PPD/complementos.</p></div></div>
+  <div class="grid-2"><div class="card"><h3>Impuestos estimados</h3><p class="sub">Se usan para dashboard interno.</p><form class="form" id="taxSettingsForm"><div class="field"><label>IVA %</label><input type="number" step="0.01" name="ivaRate" value="${esc(state.ivaRate)}"></div><div class="field"><label>ISR estimado %</label><input type="number" step="0.01" name="isrRate" value="${esc(state.isrRate)}"></div><button class="save-btn" type="submit">Guardar configuración</button></form><div class="note-box">El ISR sigue siendo estimado. Depende de régimen, deducciones, retenciones y criterio de tu contador.</div></div>
+  <div class="card"><h3>Conexión Supabase</h3><p class="sub">Para guardar en la nube desde GitHub Pages.</p><form class="form" id="supabaseSettingsForm"><div class="field"><label>Supabase URL</label><input name="supabaseUrl" value="${esc(state.supabaseUrl)}" placeholder="https://xxxxx.supabase.co"></div><div class="field"><label>Publishable / Anon Key</label><textarea name="supabaseKey" placeholder="sb_publishable... o anon key">${esc(state.supabaseKey)}</textarea></div><button class="save-btn" type="submit">Guardar conexión</button></form><div class="actions-row"><button class="ghost-btn" id="testSupabaseBtn">Probar / cargar datos</button><button class="danger-btn" id="clearLocalBtn">Borrar datos locales</button></div></div></div>
+  <div class="card" style="margin-top:16px"><h3>SQL Supabase V2 PPD + Complementos</h3><p class="sub">Ejecuta este SQL en Supabase SQL Editor. Agrega columnas PPD a tus tablas actuales y crea la tabla de complementos.</p><div class="actions-row"><button class="ghost-btn" id="copySqlBtn">Copiar SQL</button></div><pre class="code" id="sqlBlock">${esc(SUPABASE_SQL)}</pre></div>`;
 }
-
 function invoiceTable(type,rows,compact=false){
   const nameCol = type === 'issued' ? 'Cliente' : 'Proveedor';
   if(!rows.length) return `<div class="table-wrap"><div class="empty">Sin registros</div></div>`;
-  return `
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th><th>${nameCol}</th><th>Factura</th><th>Subtotal</th><th>IVA</th><th>Total</th><th>Estado</th>${compact?'':'<th>Acciones</th>'}
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(r => `
-            <tr>
-              <td>${esc(r.date)}</td>
-              <td>${esc(type==='issued'?r.client:r.provider)}</td>
-              <td>${esc(r.invoiceNumber)}</td>
-              <td>${money(r.subtotal)}</td>
-              <td>${money(r.iva)}</td>
-              <td><b>${money(r.total)}</b></td>
-              <td>${r.paid ? '<span class="badge good">Pagada</span>' : '<span class="badge warn">Pendiente</span>'}</td>
-              ${compact?'':`<td>
-                <button class="small-btn" data-toggle-paid="${type}" data-id="${esc(r.id)}">${r.paid?'Marcar pendiente':'Marcar pagada'}</button>
-                <button class="danger-btn small-btn" data-delete="${type}" data-id="${esc(r.id)}">Borrar</button>
-              </td>`}
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  return `<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>${nameCol}</th><th>Factura</th><th>Método</th><th>UUID</th><th>Total</th><th>Pagado</th><th>IVA efectivo</th><th>Estado</th>${compact?'':'<th>Acciones</th>'}</tr></thead><tbody>${rows.map(r => {
+    const ps = invoicePaymentSummary(type,r);
+    const statusHtml = ps.status === 'paid' ? '<span class="badge good">Pagada</span>' : ps.status === 'partial' ? '<span class="badge purple">Parcial</span>' : '<span class="badge warn">Pendiente</span>';
+    return `<tr><td>${esc(r.date)}</td><td>${esc(type==='issued'?r.client:r.provider)}</td><td>${esc(r.invoiceNumber)}<br><span class="muted">${money(r.subtotal)} + IVA ${money(r.iva)}</span></td><td>${methodBadge(r)}<br><span class="muted">${esc(r.paymentForm || '')}</span></td><td><span class="muted">${esc(r.uuid || 'Sin UUID')}</span></td><td><b>${money(r.total)}</b></td><td>${money(ps.paidTotal)}<div class="progress"><span style="width:${ps.progress}%"></span></div></td><td>${money(ps.paidIva)}</td><td>${statusHtml}</td>${compact?'':`<td><button class="small-btn" data-toggle-paid="${type}" data-id="${esc(r.id)}">${r.paid?'Marcar pendiente':'Marcar pagada'}</button><button class="danger-btn small-btn" data-delete="${type}" data-id="${esc(r.id)}">Borrar</button></td>`}</tr>`;
+  }).join('')}</tbody></table></div>`;
 }
-
+function paymentsTable(rows,compact=false){
+  if(!rows.length) return `<div class="table-wrap"><div class="empty">Sin complementos registrados</div></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Fecha pago</th><th>Tipo</th><th>UUID pago</th><th>Relacionado</th><th>Monto</th><th>IVA</th><th>Archivo</th>${compact?'':'<th>Acciones</th>'}</tr></thead><tbody>${rows.map(p => {
+    const docsHtml = p.docs.map(d => {
+      const inv = findInvoiceByDoc(p.type,d);
+      return `${esc(d.invoiceNumber || d.invoiceUuid || 'Documento')}<br><span class="muted">UUID: ${esc(d.invoiceUuid || 'sin UUID')} · Parcialidad: ${esc(d.partiality || '')} · Pagado: ${money(d.amountPaid)} · Saldo: ${money(d.remainingBalance)}${inv ? ' · Relacionada' : ' · No encontrada'}</span>`;
+    }).join('<hr style="border:none;border-top:1px solid #eef2f7">');
+    return `<tr><td>${esc(p.date)}</td><td>${p.type==='issued'?'<span class="badge good">Cobro cliente</span>':'<span class="badge blue">Pago proveedor</span>'}</td><td><span class="muted">${esc(p.paymentUuid || 'Sin UUID')}</span></td><td>${docsHtml}</td><td><b>${money(p.amount)}</b></td><td>${money(p.iva)}</td><td>${esc(p.fileName || '')}</td>${compact?'':`<td><button class="danger-btn small-btn" data-delete="payments" data-id="${esc(p.id)}">Borrar</button></td>`}</tr>`;
+  }).join('')}</tbody></table></div>`;
+}
 function servicesTable(rows){
   if(!rows.length) return `<div class="table-wrap"><div class="empty">Sin registros</div></div>`;
-  return `
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th><th>Cliente</th><th>Folio</th><th>Equipo</th><th>Trabajo</th><th>Monto</th><th>Estado</th><th>Factura</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(r => `
-            <tr>
-              <td>${esc(r.date)}</td>
-              <td>${esc(r.client)}</td>
-              <td>${esc(r.serviceNumber)}</td>
-              <td>${esc(r.equipment)}</td>
-              <td>${esc(r.work)}</td>
-              <td><b>${money(r.amount)}</b></td>
-              <td>${r.invoiced ? '<span class="badge good">Facturado</span>' : '<span class="badge warn">Pendiente</span>'}</td>
-              <td>${esc(r.invoiceNumber || '')}</td>
-              <td>
-                <button class="small-btn" data-toggle-service="${esc(r.id)}">${r.invoiced?'Marcar pendiente':'Marcar facturado'}</button>
-                <button class="danger-btn small-btn" data-delete="services" data-id="${esc(r.id)}">Borrar</button>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
+  return `<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Folio</th><th>Equipo</th><th>Trabajo</th><th>Monto</th><th>Estado</th><th>Factura</th><th>Acciones</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.date)}</td><td>${esc(r.client)}</td><td>${esc(r.serviceNumber)}</td><td>${esc(r.equipment)}</td><td>${esc(r.work)}</td><td><b>${money(r.amount)}</b></td><td>${r.invoiced ? '<span class="badge good">Facturado</span>' : '<span class="badge warn">Pendiente</span>'}</td><td>${esc(r.invoiceNumber || '')}</td><td><button class="small-btn" data-toggle-service="${esc(r.id)}">${r.invoiced?'Marcar pendiente':'Marcar facturado'}</button><button class="danger-btn small-btn" data-delete="services" data-id="${esc(r.id)}">Borrar</button></td></tr>`).join('')}</tbody></table></div>`;
 }
-
 function attachEvents(){
-  document.getElementById('monthInput')?.addEventListener('change', e => {
-    state.month = e.target.value || state.month;
-    saveState();
-    render();
-  });
-
-  document.getElementById('reloadBtn')?.addEventListener('click', async () => {
-    await loadRemote();
-    render();
-  });
-
-  autoCalc('issued');
-  autoCalc('received');
-  attachXmlImport('issued');
-  attachXmlImport('received');
-
-  document.getElementById('issuedForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const item = {
-      id:uid(), date:fd.get('date') || hoy(), client:fd.get('client') || '', invoiceNumber:fd.get('invoiceNumber') || '',
-      subtotal:num(fd.get('subtotal')), iva:num(fd.get('iva')), total:num(fd.get('total')), paid:fd.get('paid')==='on',
-      paymentDate:fd.get('paymentDate') || '', notes:fd.get('xmlNotes') || ''
-    };
-    await addItem('issued',item);
-  });
-
-  document.getElementById('receivedForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const item = {
-      id:uid(), date:fd.get('date') || hoy(), provider:fd.get('provider') || '', invoiceNumber:fd.get('invoiceNumber') || '',
-      subtotal:num(fd.get('subtotal')), iva:num(fd.get('iva')), total:num(fd.get('total')), paid:fd.get('paid')==='on',
-      paymentDate:fd.get('paymentDate') || '', notes:fd.get('xmlNotes') || ''
-    };
-    await addItem('received',item);
-  });
-
-  document.getElementById('serviceForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const item = {
-      id:uid(), date:fd.get('date') || hoy(), client:fd.get('client') || '', serviceNumber:fd.get('serviceNumber') || '',
-      equipment:fd.get('equipment') || '', work:fd.get('work') || '', amount:num(fd.get('amount')),
-      invoiced:fd.get('invoiced')==='on', invoiceNumber:fd.get('invoiceNumber') || ''
-    };
-    await addItem('services',item);
-  });
-
-  document.getElementById('taxSettingsForm')?.addEventListener('submit', e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    state.ivaRate = num(fd.get('ivaRate'));
-    state.isrRate = num(fd.get('isrRate'));
-    saveState();
-    alert('Configuración guardada.');
-    render();
-  });
-
-  document.getElementById('supabaseSettingsForm')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    state.supabaseUrl = normalizeSupabaseUrl(fd.get('supabaseUrl'));
-    state.supabaseKey = String(fd.get('supabaseKey') || '').trim();
-    saveState();
-    connectSupabase();
-    startAutoSync();
-    const ok = await loadRemote();
-    render();
-    if(ok){
-      alert('Conexión guardada correctamente. Supabase ya está activo.');
-    }
-  });
-
-  document.getElementById('testSupabaseBtn')?.addEventListener('click', async () => {
-    connectSupabase();
-    startAutoSync();
-    const ok = await loadRemote();
-    render();
-    if(ok){
-      alert('Prueba correcta: datos cargados desde Supabase.');
-    }
-  });
-
-  document.getElementById('clearLocalBtn')?.addEventListener('click', () => {
-    if(confirm('¿Borrar datos locales de este navegador? No borra Supabase.')){
-      localStorage.removeItem(STORAGE_KEY);
-      state = {...seed};
-      connectSupabase();
-      startAutoSync();
-      render();
-    }
-  });
-
-  document.getElementById('copySqlBtn')?.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(SUPABASE_SQL);
-    alert('SQL copiado.');
-  });
-
-  document.querySelectorAll('[data-toggle-paid]').forEach(btn => {
-    btn.onclick = async () => {
-      const type = btn.dataset.togglePaid;
-      const id = btn.dataset.id;
-      const item = state[type].find(x => String(x.id) === String(id));
-      if(!item) return;
-      item.paid = !item.paid;
-      item.paymentDate = item.paid ? (item.paymentDate || hoy()) : '';
-      try{
-        if(supabaseClient && !String(id).startsWith('local_')){
-          await updateRemote(type,id,{paid:item.paid,paymentDate:item.paymentDate});
-          await loadRemote();
-        }
-        saveState();
-        render();
-      }catch(err){
-        console.error(err);
-        alert('No pude actualizar.');
-      }
-    };
-  });
-
-  document.querySelectorAll('[data-toggle-service]').forEach(btn => {
-    btn.onclick = async () => {
-      const id = btn.dataset.toggleService;
-      const item = state.services.find(x => String(x.id) === String(id));
-      if(!item) return;
-      item.invoiced = !item.invoiced;
-      if(item.invoiced && !item.invoiceNumber){
-        item.invoiceNumber = prompt('Número de factura relacionada, si aplica:', '') || '';
-      }
-      try{
-        if(supabaseClient && !String(id).startsWith('local_')){
-          await updateRemote('services',id,{invoiced:item.invoiced,invoiceNumber:item.invoiceNumber});
-          await loadRemote();
-        }
-        saveState();
-        render();
-      }catch(err){
-        console.error(err);
-        alert('No pude actualizar.');
-      }
-    };
-  });
-
-  document.querySelectorAll('[data-delete]').forEach(btn => {
-    btn.onclick = async () => {
-      const type = btn.dataset.delete;
-      const id = btn.dataset.id;
-      if(!confirm('¿Borrar este registro?')) return;
-      try{
-        if(supabaseClient && !String(id).startsWith('local_')){
-          await deleteRemote(type,id);
-          await loadRemote();
-        }else{
-          state[type] = state[type].filter(x => String(x.id) !== String(id));
-        }
-        saveState();
-        render();
-      }catch(err){
-        console.error(err);
-        alert('No pude borrar.');
-      }
-    };
-  });
+  document.getElementById('monthInput')?.addEventListener('change', e => { state.month = e.target.value || state.month; saveState(); render(); });
+  document.getElementById('reloadBtn')?.addEventListener('click', async () => { await loadRemote(); render(); });
+  autoCalc('issued'); autoCalc('received'); attachXmlImport('issued'); attachXmlImport('received');
+  document.getElementById('paymentXmlFiles')?.addEventListener('change', importPaymentXmlFiles);
+  document.getElementById('issuedForm')?.addEventListener('submit', async e => { e.preventDefault(); const fd = new FormData(e.target); const item = normalizeInvoice({id:uid(),date:fd.get('date') || hoy(),client:fd.get('client') || '',invoiceNumber:fd.get('invoiceNumber') || '',subtotal:fd.get('subtotal'),iva:fd.get('iva'),total:fd.get('total'),paid:fd.get('paid')==='on',paymentDate:fd.get('paymentDate') || '',notes:fd.get('xmlNotes') || '',uuid:String(fd.get('uuid')||'').toUpperCase(),paymentMethod:fd.get('paymentMethod') || 'PUE',paymentForm:fd.get('paymentForm') || '',currency:fd.get('currency') || 'MXN'},'issued'); await addItem('issued',item); });
+  document.getElementById('receivedForm')?.addEventListener('submit', async e => { e.preventDefault(); const fd = new FormData(e.target); const item = normalizeInvoice({id:uid(),date:fd.get('date') || hoy(),provider:fd.get('provider') || '',invoiceNumber:fd.get('invoiceNumber') || '',subtotal:fd.get('subtotal'),iva:fd.get('iva'),total:fd.get('total'),paid:fd.get('paid')==='on',paymentDate:fd.get('paymentDate') || '',notes:fd.get('xmlNotes') || '',uuid:String(fd.get('uuid')||'').toUpperCase(),paymentMethod:fd.get('paymentMethod') || 'PUE',paymentForm:fd.get('paymentForm') || '',currency:fd.get('currency') || 'MXN'},'received'); await addItem('received',item); });
+  document.getElementById('serviceForm')?.addEventListener('submit', async e => { e.preventDefault(); const fd = new FormData(e.target); const item = {id:uid(),date:fd.get('date') || hoy(),client:fd.get('client') || '',serviceNumber:fd.get('serviceNumber') || '',equipment:fd.get('equipment') || '',work:fd.get('work') || '',amount:num(fd.get('amount')),invoiced:fd.get('invoiced')==='on',invoiceNumber:fd.get('invoiceNumber') || ''}; await addItem('services',item); });
+  document.getElementById('taxSettingsForm')?.addEventListener('submit', e => { e.preventDefault(); const fd = new FormData(e.target); state.ivaRate = num(fd.get('ivaRate')); state.isrRate = num(fd.get('isrRate')); saveState(); alert('Configuración guardada.'); render(); });
+  document.getElementById('supabaseSettingsForm')?.addEventListener('submit', async e => { e.preventDefault(); const fd = new FormData(e.target); state.supabaseUrl = String(fd.get('supabaseUrl') || '').trim(); state.supabaseKey = String(fd.get('supabaseKey') || '').trim(); saveState(); connectSupabase(); await loadRemote(); render(); });
+  document.getElementById('testSupabaseBtn')?.addEventListener('click', async () => { connectSupabase(); await loadRemote(); render(); });
+  document.getElementById('clearLocalBtn')?.addEventListener('click', () => { if(confirm('¿Borrar datos locales de este navegador? No borra Supabase.')){ localStorage.removeItem(STORAGE_KEY); state = normalizeState({...seed}); connectSupabase(); render(); } });
+  document.getElementById('copySqlBtn')?.addEventListener('click', async () => { await navigator.clipboard.writeText(SUPABASE_SQL); alert('SQL copiado.'); });
+  document.querySelectorAll('[data-toggle-paid]').forEach(btn => { btn.onclick = async () => { const type = btn.dataset.togglePaid; const id = btn.dataset.id; const item = state[type].find(x => String(x.id) === String(id)); if(!item) return; item.paid = !item.paid; item.paymentDate = item.paid ? (item.paymentDate || hoy()) : ''; try{ if(supabaseClient && !String(id).startsWith('local_')){ await updateRemote(type,id,{paid:item.paid,paymentDate:item.paymentDate}); await loadRemote(); } saveState(); render(); }catch(err){ console.error(err); alert('No pude actualizar.'); } }; });
+  document.querySelectorAll('[data-toggle-service]').forEach(btn => { btn.onclick = async () => { const id = btn.dataset.toggleService; const item = state.services.find(x => String(x.id) === String(id)); if(!item) return; item.invoiced = !item.invoiced; if(item.invoiced && !item.invoiceNumber) item.invoiceNumber = prompt('Número de factura relacionada, si aplica:', '') || ''; try{ if(supabaseClient && !String(id).startsWith('local_')){ await updateRemote('services',id,{invoiced:item.invoiced,invoiceNumber:item.invoiceNumber}); await loadRemote(); } saveState(); render(); }catch(err){ console.error(err); alert('No pude actualizar.'); } }; });
+  document.querySelectorAll('[data-delete]').forEach(btn => { btn.onclick = async () => { const type = btn.dataset.delete; const id = btn.dataset.id; if(!confirm('¿Borrar este registro?')) return; try{ if(supabaseClient && !String(id).startsWith('local_')){ await deleteRemote(type,id); await loadRemote(); }else{ state[type] = state[type].filter(x => String(x.id) !== String(id)); } saveState(); render(); }catch(err){ console.error(err); alert('No pude borrar.'); } }; });
 }
-
 function autoCalc(type){
-  const sub = document.getElementById(type+'Subtotal');
-  const iva = document.getElementById(type+'Iva');
-  const total = document.getElementById(type+'Total');
+  const sub = document.getElementById(type+'Subtotal'), iva = document.getElementById(type+'Iva'), total = document.getElementById(type+'Total');
   if(!sub || !iva || !total) return;
-
-  function update(){
-    const ivaCalc = calcIva(sub.value);
-    iva.value = ivaCalc;
-    total.value = calcTotal(sub.value, ivaCalc);
-  }
-  sub.addEventListener('input', update);
-  iva.addEventListener('input', () => total.value = calcTotal(sub.value, iva.value));
+  function update(){ const ivaCalc = calcIva(sub.value); iva.value = ivaCalc; total.value = calcTotal(sub.value,ivaCalc); }
+  sub.addEventListener('input', update); iva.addEventListener('input', () => total.value = calcTotal(sub.value,iva.value));
 }
-
-async function addItem(type,item){
+async function addItem(type,item,refresh=true){
   try{
-    if(supabaseClient){
-      await insertRemote(type,item);
-      await loadRemote();
-    }else{
-      state[type].unshift(item);
-    }
-    saveState();
-    render();
-  }catch(err){
-    console.error(err);
-    alert('No pude guardar. Si estás usando Supabase, revisa SQL, URL, key y permisos.');
-  }
+    if(supabaseClient){ await insertRemote(type,item); if(refresh) await loadRemote(); }
+    else{ state[type].unshift(item); }
+    saveState(); if(refresh) render();
+  }catch(err){ console.error(err); alert('No pude guardar. Si estás usando Supabase, ejecuta el SQL V2 y revisa URL, key y permisos. Detalle: ' + (err.message || '')); }
 }
-
-const SUPABASE_SQL = `-- SotoMed Control V1.1
+const SUPABASE_SQL = `-- SotoMed Control V2.0 PPD + Complementos de Pago
 -- Ejecuta esto en Supabase > SQL Editor.
--- Para esta V1 rápida se agregan políticas abiertas para anon.
--- Úsalo como arranque; después conviene meter login y políticas por usuario.
+-- Primero conserva tus tablas actuales y agrega columnas para UUID, PUE/PPD y complementos.
+-- Nota de seguridad: estas políticas abiertas sirven para arranque sin login. En producción conviene usar autenticación y RLS por usuario.
 
 create table if not exists public.sotomed_issued_invoices (
   id bigint generated always as identity primary key,
@@ -1106,42 +728,59 @@ create table if not exists public.sotomed_service_sheets (
   invoice_number text
 );
 
+alter table public.sotomed_issued_invoices add column if not exists uuid text;
+alter table public.sotomed_issued_invoices add column if not exists payment_method text not null default 'PUE';
+alter table public.sotomed_issued_invoices add column if not exists payment_form text;
+alter table public.sotomed_issued_invoices add column if not exists currency text not null default 'MXN';
+alter table public.sotomed_issued_invoices add column if not exists cfdi_type text;
+
+alter table public.sotomed_received_invoices add column if not exists uuid text;
+alter table public.sotomed_received_invoices add column if not exists payment_method text not null default 'PUE';
+alter table public.sotomed_received_invoices add column if not exists payment_form text;
+alter table public.sotomed_received_invoices add column if not exists currency text not null default 'MXN';
+alter table public.sotomed_received_invoices add column if not exists cfdi_type text;
+
+create table if not exists public.sotomed_payment_complements (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  payment_date date not null,
+  payment_type text not null check (payment_type in ('issued','received')),
+  payment_uuid text,
+  payer text,
+  receiver text,
+  amount numeric(12,2) not null default 0,
+  iva numeric(12,2) not null default 0,
+  currency text not null default 'MXN',
+  payment_form text,
+  file_name text,
+  notes text,
+  related_docs jsonb not null default '[]'::jsonb
+);
+
 alter table public.sotomed_issued_invoices enable row level security;
 alter table public.sotomed_received_invoices enable row level security;
 alter table public.sotomed_service_sheets enable row level security;
+alter table public.sotomed_payment_complements enable row level security;
 
 drop policy if exists "sotomed issued anon all" on public.sotomed_issued_invoices;
 drop policy if exists "sotomed received anon all" on public.sotomed_received_invoices;
 drop policy if exists "sotomed services anon all" on public.sotomed_service_sheets;
+drop policy if exists "sotomed payments anon all" on public.sotomed_payment_complements;
 
-create policy "sotomed issued anon all"
-on public.sotomed_issued_invoices
-for all
-to anon
-using (true)
-with check (true);
-
-create policy "sotomed received anon all"
-on public.sotomed_received_invoices
-for all
-to anon
-using (true)
-with check (true);
-
-create policy "sotomed services anon all"
-on public.sotomed_service_sheets
-for all
-to anon
-using (true)
-with check (true);
+create policy "sotomed issued anon all" on public.sotomed_issued_invoices for all to anon using (true) with check (true);
+create policy "sotomed received anon all" on public.sotomed_received_invoices for all to anon using (true) with check (true);
+create policy "sotomed services anon all" on public.sotomed_service_sheets for all to anon using (true) with check (true);
+create policy "sotomed payments anon all" on public.sotomed_payment_complements for all to anon using (true) with check (true);
 
 create index if not exists idx_sotomed_issued_invoice_date on public.sotomed_issued_invoices(invoice_date);
 create index if not exists idx_sotomed_received_invoice_date on public.sotomed_received_invoices(invoice_date);
-create index if not exists idx_sotomed_service_date on public.sotomed_service_sheets(service_date);`;
-
+create index if not exists idx_sotomed_service_date on public.sotomed_service_sheets(service_date);
+create index if not exists idx_sotomed_issued_uuid on public.sotomed_issued_invoices(uuid);
+create index if not exists idx_sotomed_received_uuid on public.sotomed_received_invoices(uuid);
+create index if not exists idx_sotomed_payment_date on public.sotomed_payment_complements(payment_date);
+create index if not exists idx_sotomed_payment_uuid on public.sotomed_payment_complements(payment_uuid);`;
 connectSupabase();
-startAutoSync();
-loadRemote(false).then(render);
+loadRemote().then(render);
 </script>
 </body>
 </html>
