@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SOTOMED ADMIN — Control de Gastos</title>
+<style>
+  :root{
+    --navy:#0d1b2a;
+    --navy-2:#102336;
+    --ink:#111827;
+    --muted:#6b7280;
+    --line:#dfe4ea;
+    --soft:#f6f8fa;
+    --green:#2dbf64;
+    --amber:#d98200;
+    --red:#c52121;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f4f6f8;color:var(--ink);font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif}
+  body{min-height:100vh}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  a{color:inherit}
+
+  .topbar{
+    height:74px;
+    background:linear-gradient(90deg,var(--navy),var(--navy-2));
+    color:#fff;
+    display:flex;
+    align-items:center;
+    padding:0 34px;
+    gap:34px;
+    box-shadow:0 1px 0 rgba(255,255,255,.05);
+  }
+  .brand{
+    width:290px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:800;
+    letter-spacing:.04em;
+    font-size:25px;
+  }
+  .brand-mark{
+    color:var(--green);
+    font-weight:900;
+  }
+  .brand small{
+    display:block;
+    font-size:8px;
+    font-weight:600;
+    letter-spacing:.18em;
+    color:#9fb0c3;
+    margin-top:2px;
+  }
+  .brand-wrap{line-height:.85}
+  .nav{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    height:100%;
+    flex:1;
+  }
+  .nav a{
+    position:relative;
+    height:100%;
+    display:flex;
+    align-items:center;
+    padding:0 17px;
+    font-size:13px;
+    font-weight:700;
+    color:#d8e0e9;
+    text-decoration:none;
+  }
+  .nav a.active{color:#fff}
+  .nav a.active:after{
+    content:"";
+    position:absolute;
+    left:14px; right:14px; bottom:0;
+    height:3px; background:var(--green);
+  }
+  .top-actions{display:flex;align-items:center;gap:20px;font-size:13px;font-weight:700}
+  .top-actions .pill{display:flex;gap:8px;align-items:center;color:#fff}
+  .chev{font-size:11px;color:#b7c4d1}
+
+  .shell{padding:36px 24px 22px}
+  .heading-row{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:20px; margin-bottom:24px;
+  }
+  h1{font-size:26px;margin:0 0 8px;font-weight:800;letter-spacing:-.02em}
+  .subtitle{color:var(--muted);font-size:14px}
+  .actions{display:flex;gap:12px}
+  .btn{
+    height:42px;border:1px solid #cfd6de;background:#fff;color:var(--ink);
+    padding:0 17px;border-radius:3px;font-size:13px;font-weight:800;
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .btn-primary{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn-primary:hover{background:#142a40}
+  .btn:hover{box-shadow:0 1px 3px rgba(15,23,42,.08)}
+  .plus{font-size:22px;font-weight:400;line-height:1}
+
+  .summary{
+    background:#fff;border:1px solid var(--line);border-radius:4px;
+    display:grid;grid-template-columns:1.25fr repeat(4,1fr);
+    margin-bottom:20px;min-height:162px;
+  }
+  .metric{padding:31px 36px;position:relative}
+  .metric:not(:last-child):after{
+    content:"";position:absolute;right:0;top:27px;bottom:27px;width:1px;background:var(--line)
+  }
+  .metric-label{font-size:12px;font-weight:800;color:#505866;text-transform:uppercase;letter-spacing:.02em}
+  .metric-value{margin-top:28px;font-size:36px;font-weight:800;letter-spacing:-.03em}
+  .metric-value.small{font-size:32px}
+  .metric-sub{margin-top:7px;font-size:13px;color:var(--muted)}
+  .metric.amber .metric-value,.metric.amber .metric-sub{color:var(--amber)}
+  .metric.red .metric-value,.metric.red .metric-sub{color:var(--red)}
+  .currency{font-size:13px;font-weight:700;color:var(--muted);margin-left:6px}
+
+  .workspace{
+    display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start;
+  }
+  .panel{background:#fff;border:1px solid var(--line);border-radius:4px}
+  .panel-head{
+    height:66px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line)
+  }
+  .panel-title{font-size:14px;font-weight:900;display:flex;align-items:center;gap:10px}
+  .panel-tools{display:flex;align-items:center;gap:12px}
+  .search{
+    width:250px;height:40px;border:1px solid #ccd4dd;border-radius:3px;background:#fff;
+    padding:0 40px 0 14px;outline:none
+  }
+  .search:focus{border-color:#8090a0}
+  .search-wrap{position:relative}
+  .search-wrap span{position:absolute;right:14px;top:10px;color:#6b7280}
+  .table-wrap{overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:940px}
+  thead th{
+    background:#fafbfc;border-bottom:1px solid var(--line);text-align:left;
+    padding:14px 16px;font-size:11px;font-weight:900;color:#303846;text-transform:uppercase;
+    white-space:nowrap
+  }
+  tbody td{border-bottom:1px solid #edf0f3;padding:14px 16px;font-size:13px;vertical-align:middle}
+  tbody tr:hover{background:#fbfcfd}
+  .empty{
+    min-height:420px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted)
+  }
+  .empty-icon{font-size:56px;color:#c7cdd4;margin-bottom:10px}
+  .empty strong{display:block;color:#525c68;font-size:17px;margin-bottom:8px}
+  .status{display:inline-flex;align-items:center;padding:5px 9px;border-radius:2px;font-size:11px;font-weight:800}
+  .st-complete{background:#e9f7ef;color:#177a42}
+  .st-incomplete{background:#fff2df;color:#9d5b00}
+  .st-none{background:#fde9e9;color:#a31b1b}
+  .doclink{text-decoration:none;font-weight:800}
+  .doclink:hover{text-decoration:underline}
+
+  .filters .panel-head{height:54px}
+  .filter-body{padding:18px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:11px;font-weight:900;color:#3f4854;margin-bottom:8px;text-transform:uppercase}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field input,.field select,.modal input,.modal select,.modal textarea{
+    width:100%;height:40px;border:1px solid #ccd4dd;border-radius:3px;background:#fff;padding:0 12px;color:#111827;outline:none
+  }
+  .field input:focus,.field select:focus,.modal input:focus,.modal select:focus,.modal textarea:focus{
+    border-color:#7c8b9a;box-shadow:0 0 0 2px rgba(13,27,42,.06)
+  }
+  .reset{width:100%;justify-content:center;margin-top:3px}
+
+  footer{
+    margin-top:22px;background:linear-gradient(90deg,var(--navy),var(--navy-2));color:#fff;
+    padding:18px 30px;display:flex;justify-content:space-between;align-items:center;font-size:11px
+  }
+  footer .muted{color:#c5d0db;margin-top:4px}
+
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(6,15,25,.58);display:none;align-items:center;justify-content:center;
+    padding:24px;z-index:999
+  }
+  .modal-backdrop.open{display:flex}
+  .modal{
+    width:min(760px,100%);background:#fff;border-radius:5px;box-shadow:0 20px 70px rgba(0,0,0,.28);overflow:hidden
+  }
+  .modal-head{
+    height:68px;background:var(--navy);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between
+  }
+  .modal-head h2{margin:0;font-size:18px}
+  .close{background:none;border:0;color:#fff;font-size:24px}
+  .modal-body{padding:24px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-field label{display:block;margin-bottom:7px;font-size:11px;font-weight:900;text-transform:uppercase;color:#454f5c}
+  .form-field.full{grid-column:1/-1}
+  .modal textarea{height:82px;padding-top:10px;resize:vertical}
+  .modal-foot{padding:17px 24px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;background:#fafbfc}
+  .danger-link{color:#a31b1b;background:none;border:0;font-size:12px;font-weight:800}
+  .row-actions button{background:none;border:0;font-size:16px}
+  .money{font-variant-numeric:tabular-nums;font-weight:800}
+
+  @media (max-width:1100px){
+    .nav{display:none}
+    .brand{width:auto;flex:1}
+    .summary{grid-template-columns:1fr 1fr}
+    .metric:nth-child(2):after{display:none}
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:700px){
+    .topbar{padding:0 18px}
+    .top-actions{display:none}
+    .shell{padding:22px 14px}
+    .heading-row{flex-direction:column}
+    .actions{width:100%}
+    .btn{flex:1;justify-content:center}
+    .summary{grid-template-columns:1fr}
+    .metric:after{display:none!important}
+    .metric{border-bottom:1px solid var(--line)}
+    .metric:last-child{border-bottom:0}
+    .panel-head{height:auto;align-items:flex-start;gap:10px;flex-direction:column;padding:16px}
+    .panel-tools{width:100%}
+    .search-wrap,.search{width:100%}
+    .form-grid{grid-template-columns:1fr}
+    .form-field.full{grid-column:auto}
+  }
+
+  .app-root{display:none}
+  .app-root.ready{display:block}
+  .login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#081522,#10283d);display:flex;align-items:center;justify-content:center;padding:24px;z-index:2000}
+  .login-card{width:min(420px,100%);background:#fff;border-radius:6px;box-shadow:0 25px 80px rgba(0,0,0,.3);overflow:hidden}
+  .login-brand{background:#0d1b2a;color:#fff;padding:28px 30px 24px}
+  .login-brand strong{font-size:26px;letter-spacing:.04em}.login-brand span{color:#2dbf64}.login-brand small{display:block;color:#9fb0c3;margin-top:6px;font-size:11px;letter-spacing:.08em}
+  .login-body{padding:28px 30px 30px}.login-body h2{margin:0 0 6px;font-size:20px}.login-body p{margin:0 0 22px;color:#6b7280;font-size:13px}
+  .login-field{margin-bottom:16px}.login-field label{display:block;margin-bottom:7px;font-size:11px;font-weight:900;text-transform:uppercase;color:#454f5c}.login-field input{width:100%;height:44px;border:1px solid #ccd4dd;border-radius:3px;padding:0 12px;outline:none}
+  .login-error{min-height:18px;color:#b42318;font-size:12px;margin:2px 0 12px}.login-submit{width:100%;justify-content:center}
+  .sync-badge{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#d8e0e9}.sync-dot{width:7px;height:7px;border-radius:50%;background:#7f8c98}.sync-dot.online{background:#2dbf64}
+</style>
+</head>
+<body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand"><strong>SOTO<span>M</span>ED</strong><small>ADMINISTRACIÓN EN LA NUBE</small></div>
+    <form class="login-body" id="loginForm">
+      <h2>Acceso administrativo</h2>
+      <p>Ingresa con la cuenta autorizada de SotoMed.</p>
+      <div class="login-field"><label>Correo</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+      <div class="login-field"><label>Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+      <div class="login-error" id="loginError"></div>
+      <button class="btn btn-primary login-submit" type="submit">INICIAR SESIÓN</button>
+    </form>
+  </div>
+</div>
+<div class="app-root" id="appRoot">
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-wrap">SOTO<span class="brand-mark">M</span>ED<small>INGENIERÍA & SERVICIO</small></div>
+  </div>
+  <nav class="nav">
+    <a class="active" href="#">RESUMEN</a>
+    <a href="#gastos">GASTOS</a>
+    <a href="#">PROVEEDORES</a>
+    <a href="#">CONCEPTOS</a>
+    <a href="#">CLIENTES</a>
+    <a href="#">CONFIGURACIÓN</a>
+  </nav>
+  <div class="top-actions">
+    <div class="pill">▣ <span id="topPeriod"></span> <span class="chev">⌄</span></div>
+    <div class="sync-badge"><span class="sync-dot" id="syncDot"></span><span id="syncText">Conectando...</span></div>
+    <button id="logoutBtn" style="background:none;border:0;color:#fff;font-weight:800;font-size:12px">SALIR</button>
+  </div>
+</header>
+
+<main class="shell">
+  <div class="heading-row">
+    <div>
+      <h1>Control de Gastos Mensuales</h1>
+      <div class="subtitle">Registro y control de facturas de gastos</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="newExpenseBtn"><span class="plus">＋</span> NUEVO GASTO</button>
+      <button class="btn" id="exportBtn">⇩ EXPORTAR</button>
+    </div>
+  </div>
+
+  <section class="summary">
+    <div class="metric">
+      <div class="metric-label">Total del mes</div>
+      <div class="metric-value" id="totalMonth">$0.00<span class="currency">MXN</span></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Facturas completas</div>
+      <div class="metric-value small" id="completeCount">0</div>
+      <div class="metric-sub" id="completePct">0%</div>
+    </div>
+    <div class="metric amber">
+      <div class="metric-label">Facturas incompletas</div>
+      <div class="metric-value small" id="incompleteCount">0</div>
+      <div class="metric-sub" id="incompletePct">0%</div>
+    </div>
+    <div class="metric red">
+      <div class="metric-label">Sin factura</div>
+      <div class="metric-value small" id="noInvoiceCount">0</div>
+      <div class="metric-sub" id="noInvoicePct">0%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Proveedores</div>
+      <div class="metric-value small" id="providersCount">0</div>
+      <div class="metric-sub">Este mes</div>
+    </div>
+  </section>
+
+  <section class="workspace" id="gastos">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">▣ GASTOS REGISTRADOS</div>
+        <div class="panel-tools">
+          <div class="search-wrap">
+            <input id="searchInput" class="search" placeholder="Buscar..." />
+            <span>⌕</span>
+          </div>
+          <button class="btn" id="actionsBtn">ACCIONES ⌄</button>
+        </div>
+      </div>
+      <div class="table-wrap" id="tableWrap"></div>
+    </div>
+
+    <aside class="panel filters">
+      <div class="panel-head">
+        <div class="panel-title">▽ FILTROS</div>
+      </div>
+      <div class="filter-body">
+        <div class="field">
+          <label>Periodo</label>
+          <div class="field-row">
+            <select id="monthFilter"></select>
+            <select id="yearFilter"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Proveedor</label>
+          <select id="providerFilter"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label>Concepto</label>
+          <select id="conceptFilter"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label>Cliente</label>
+          <select id="clientFilter"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label>Categoría</label>
+          <select id="categoryFilter"><option value="">Todas</option></select>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+            <option value="Completo">Completo</option>
+            <option value="Incompleto">Incompleto</option>
+            <option value="Sin factura">Sin factura</option>
+          </select>
+        </div>
+        <button class="btn btn-primary reset" id="resetFilters">↻ LIMPIAR FILTROS</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<footer>
+  <div>
+    <div>SOTOMED ADMIN v1.0.0</div>
+    <div class="muted">Control mensual de facturas de gastos</div>
+  </div>
+  <div>© 2026 SotoMed. Todos los derechos reservados.</div>
+</footer>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nuevo gasto</h2>
+      <button class="close" id="closeModal">×</button>
+    </div>
+    <form id="expenseForm">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Fecha</label>
+            <input type="date" id="date" required />
+          </div>
+          <div class="form-field">
+            <label>Monto (MXN)</label>
+            <input type="number" id="amount" min="0" step="0.01" placeholder="0.00" required />
+          </div>
+          <div class="form-field">
+            <label>Proveedor</label>
+            <input id="provider" placeholder="Ej. Gasolinera..." required />
+          </div>
+          <div class="form-field">
+            <label>Concepto</label>
+            <input id="concept" placeholder="Ej. Combustible..." required />
+          </div>
+          <div class="form-field">
+            <label>Cliente</label>
+            <input id="client" placeholder="Ej. SotoMed / Ortho..." />
+          </div>
+          <div class="form-field">
+            <label>Categoría</label>
+            <select id="category">
+              <option value="">Selecciona...</option>
+              <option>Gasolina</option>
+              <option>Casetas</option>
+              <option>Hospedaje</option>
+              <option>Alimentos</option>
+              <option>Refacciones</option>
+              <option>Herramientas</option>
+              <option>Mensajería</option>
+              <option>Papelería</option>
+              <option>Software</option>
+              <option>Telefonía</option>
+              <option>Vehículos</option>
+              <option>Honorarios</option>
+              <option>Impuestos</option>
+              <option>Otros</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label>Enlace PDF en Google Drive</label>
+            <input id="pdfUrl" type="url" placeholder="https://drive.google.com/..." />
+          </div>
+          <div class="form-field full">
+            <label>Enlace XML en Google Drive</label>
+            <input id="xmlUrl" type="url" placeholder="https://drive.google.com/..." />
+          </div>
+          <div class="form-field full">
+            <label>Notas</label>
+            <textarea id="notes" placeholder="Observaciones opcionales"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="cancelModal">CANCELAR</button>
+        <button type="submit" class="btn btn-primary">GUARDAR GASTO</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { firebaseConfig, AUTHORIZED_EMAIL } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const expensesRef = collection(db, "expenses");
+let expenses = [];
+let unsubscribeExpenses = null;
+
+const $ = s => document.querySelector(s);
+const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const now = new Date();
+const monthFilter = $("#monthFilter");
+const yearFilter = $("#yearFilter");
+months.forEach((m,i)=> monthFilter.add(new Option(m, String(i))));
+for(let y=2024;y<=2035;y++) yearFilter.add(new Option(String(y), String(y)));
+monthFilter.value = String(now.getMonth());
+yearFilter.value = String(now.getFullYear());
+$("#loginEmail").value = AUTHORIZED_EMAIL;
+
+function setSync(text, online=false){ $("#syncText").textContent=text; $("#syncDot").classList.toggle("online", online); }
+function money(v){ return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(Number(v||0)); }
+function pct(n,total){ return total ? Math.round((n/total)*100) + "%" : "0%"; }
+function expenseStatus(e){ if(e.pdfUrl && e.xmlUrl) return "Completo"; if(e.pdfUrl || e.xmlUrl) return "Incompleto"; return "Sin factura"; }
+function inSelectedPeriod(e){ const d=new Date(e.date+"T12:00:00"); return d.getMonth()===Number(monthFilter.value)&&d.getFullYear()===Number(yearFilter.value); }
+function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es")); }
+function esc(s=""){ return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+function escAttr(s=""){ return esc(s); }
+function fillSelect(sel, vals, allLabel){ const current=sel.value; sel.innerHTML=`<option value="">${allLabel}</option>`; vals.forEach(v=>sel.add(new Option(v,v))); if([...sel.options].some(o=>o.value===current)) sel.value=current; }
+function refreshFilters(){ const period=expenses.filter(inSelectedPeriod); fillSelect($("#providerFilter"),uniq(period.map(e=>e.provider)),"Todos"); fillSelect($("#conceptFilter"),uniq(period.map(e=>e.concept)),"Todos"); fillSelect($("#clientFilter"),uniq(period.map(e=>e.client)),"Todos"); fillSelect($("#categoryFilter"),uniq(period.map(e=>e.category)),"Todas"); }
+function filteredExpenses(){ const q=$("#searchInput").value.trim().toLowerCase(); return expenses.filter(inSelectedPeriod).filter(e=>{ const st=expenseStatus(e); const hay=[e.provider,e.concept,e.client,e.category,e.notes].join(" ").toLowerCase(); return (!$("#providerFilter").value||e.provider===$("#providerFilter").value)&&(!$("#conceptFilter").value||e.concept===$("#conceptFilter").value)&&(!$("#clientFilter").value||e.client===$("#clientFilter").value)&&(!$("#categoryFilter").value||e.category===$("#categoryFilter").value)&&(!$("#statusFilter").value||st===$("#statusFilter").value)&&(!q||hay.includes(q)); }).sort((a,b)=>b.date.localeCompare(a.date)); }
+function renderSummary(){ const period=expenses.filter(inSelectedPeriod); const total=period.reduce((s,e)=>s+Number(e.amount||0),0); const complete=period.filter(e=>expenseStatus(e)==="Completo").length; const incomplete=period.filter(e=>expenseStatus(e)==="Incompleto").length; const none=period.filter(e=>expenseStatus(e)==="Sin factura").length; $("#totalMonth").innerHTML=`${money(total)}<span class="currency">MXN</span>`; $("#completeCount").textContent=complete; $("#completePct").textContent=pct(complete,period.length); $("#incompleteCount").textContent=incomplete; $("#incompletePct").textContent=pct(incomplete,period.length); $("#noInvoiceCount").textContent=none; $("#noInvoicePct").textContent=pct(none,period.length); $("#providersCount").textContent=uniq(period.map(e=>e.provider)).length; $("#topPeriod").textContent=`${months[Number(monthFilter.value)].toUpperCase()} ${yearFilter.value}`; }
+function renderTable(){ const data=filteredExpenses(), wrap=$("#tableWrap"); if(!data.length){ wrap.innerHTML=`<div class="empty"><div><div class="empty-icon">▱</div><strong>No hay registros</strong><div>Comienza agregando tu primer gasto.</div></div></div>`; return; } wrap.innerHTML=`<table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Cliente</th><th>Categoría</th><th>Monto</th><th>PDF</th><th>XML</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${data.map(e=>{ const st=expenseStatus(e), cls=st==="Completo"?"st-complete":st==="Incompleto"?"st-incomplete":"st-none"; return `<tr><td>${e.date.split("-").reverse().join("/")}</td><td>${esc(e.provider)}</td><td>${esc(e.concept)}</td><td>${esc(e.client||"—")}</td><td>${esc(e.category||"—")}</td><td class="money">${money(e.amount)}</td><td>${e.pdfUrl?`<a class="doclink" href="${escAttr(e.pdfUrl)}" target="_blank">Abrir</a>`:"—"}</td><td>${e.xmlUrl?`<a class="doclink" href="${escAttr(e.xmlUrl)}" target="_blank">Abrir</a>`:"—"}</td><td><span class="status ${cls}">${st}</span></td><td class="row-actions"><button title="Eliminar" data-delete="${e.id}">⋮</button></td></tr>`; }).join("")}</tbody></table>`; wrap.querySelectorAll("[data-delete]").forEach(b=>b.addEventListener("click",()=>removeExpense(b.dataset.delete))); }
+function render(){ refreshFilters(); renderSummary(); renderTable(); }
+function openModal(){ $("#expenseForm").reset(); $("#date").value=new Date().toISOString().slice(0,10); $("#modalBackdrop").classList.add("open"); }
+function closeModal(){ $("#modalBackdrop").classList.remove("open"); }
+async function removeExpense(id){ if(confirm("¿Eliminar este gasto?")){ try{ setSync("Guardando..."); await deleteDoc(doc(db,"expenses",id)); }catch(err){ alert("No se pudo eliminar el gasto: "+err.message); setSync("Error de conexión"); } } }
+
+$("#loginForm").addEventListener("submit", async e=>{ e.preventDefault(); $("#loginError").textContent=""; const email=$("#loginEmail").value.trim().toLowerCase(); if(email!==AUTHORIZED_EMAIL.toLowerCase()){ $("#loginError").textContent="Esta cuenta no está autorizada."; return; } try{ await signInWithEmailAndPassword(auth,email,$("#loginPassword").value); } catch(err){ $("#loginError").textContent="Correo o contraseña incorrectos."; } });
+$("#logoutBtn").addEventListener("click",()=>signOut(auth));
+$("#newExpenseBtn").addEventListener("click",openModal); $("#closeModal").addEventListener("click",closeModal); $("#cancelModal").addEventListener("click",closeModal); $("#modalBackdrop").addEventListener("click",e=>{if(e.target.id==="modalBackdrop")closeModal();});
+$("#expenseForm").addEventListener("submit", async e=>{ e.preventDefault(); const d=$("#date").value; const payload={ date:d, amount:Number($("#amount").value), provider:$("#provider").value.trim(), concept:$("#concept").value.trim(), client:$("#client").value.trim(), category:$("#category").value, pdfUrl:$("#pdfUrl").value.trim(), xmlUrl:$("#xmlUrl").value.trim(), notes:$("#notes").value.trim(), createdAt:serverTimestamp(), createdBy:auth.currentUser?.email||"" }; try{ setSync("Guardando..."); await addDoc(expensesRef,payload); const dt=new Date(d+"T12:00:00"); monthFilter.value=String(dt.getMonth()); yearFilter.value=String(dt.getFullYear()); closeModal(); }catch(err){ alert("No se pudo guardar: "+err.message); setSync("Error de conexión"); } });
+[monthFilter,yearFilter,$("#providerFilter"),$("#conceptFilter"),$("#clientFilter"),$("#categoryFilter"),$("#statusFilter"),$("#searchInput")].forEach(el=>{ el.addEventListener("change",render); el.addEventListener("input",render); });
+$("#resetFilters").addEventListener("click",()=>{ $("#providerFilter").value=$("#conceptFilter").value=$("#clientFilter").value=$("#categoryFilter").value=$("#statusFilter").value=$("#searchInput").value=""; render(); });
+$("#exportBtn").addEventListener("click",()=>{ const rows=filteredExpenses(); const header=["Fecha","Proveedor","Concepto","Cliente","Categoria","Monto","PDF","XML","Estado","Notas"]; const csv=[header,...rows.map(e=>[e.date,e.provider,e.concept,e.client,e.category,e.amount,e.pdfUrl,e.xmlUrl,expenseStatus(e),e.notes])].map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"); const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url; a.download=`sotomed_gastos_${yearFilter.value}_${String(Number(monthFilter.value)+1).padStart(2,"0")}.csv`; a.click(); URL.revokeObjectURL(url); });
+
+onAuthStateChanged(auth,user=>{ if(user && user.email?.toLowerCase()===AUTHORIZED_EMAIL.toLowerCase()){ $("#loginScreen").style.display="none"; $("#appRoot").classList.add("ready"); setSync("Sincronizado",true); if(unsubscribeExpenses)unsubscribeExpenses(); const q=query(expensesRef,orderBy("date","desc")); unsubscribeExpenses=onSnapshot(q,snap=>{ expenses=snap.docs.map(d=>({id:d.id,...d.data()})); setSync("Sincronizado",true); render(); },err=>{ console.error(err); setSync("Error de conexión"); }); } else { if(user) signOut(auth); $("#appRoot").classList.remove("ready"); $("#loginScreen").style.display="flex"; if(unsubscribeExpenses){unsubscribeExpenses();unsubscribeExpenses=null;} expenses=[]; } });
+</script>
+</div>
+</body>
+</html>
